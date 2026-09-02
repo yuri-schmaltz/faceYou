@@ -26,6 +26,7 @@ logger.init(state_manager.get_item('log_level') or 'info')
 jobs_path = state_manager.get_item('jobs_path') or '.jobs'
 job_manager.init_jobs(jobs_path)
 
+from facefusion import metadata
 from facefusion.api.database import init_db
 from facefusion.api.worker import start_worker, stop_worker
 from facefusion.api.routes import router as api_router
@@ -40,10 +41,12 @@ def create_app() -> FastAPI:
         yield
         stop_worker()
 
+    app_version = metadata.get('version') or "3.7.0-my.1"
+
     app = FastAPI(
         title="FaceFusion API",
         description="RESTful API for the modernized FaceFusion decoupled architecture",
-        version="3.6.1",
+        version=app_version,
         lifespan=lifespan
     )
 
@@ -91,7 +94,7 @@ def create_app() -> FastAPI:
         def read_root():
             return {
                 "app": "FaceFusion API",
-                "version": "3.6.1",
+                "version": app_version,
                 "status": "online"
             }
 

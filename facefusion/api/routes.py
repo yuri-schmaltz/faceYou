@@ -16,9 +16,36 @@ from facefusion.processors.core import get_processors_modules
 from facefusion.jobs import job_manager, job_runner, job_helper
 from facefusion.args import collect_step_args
 from facefusion.core import process_step
-from facefusion.api.database import get_db, JobModel
+from facefusion.api.database import get_db, JobModel, SessionLocal
 
 router = APIRouter()
+
+
+def get_allowed_directories() -> List[str]:
+    jobs_path = state_manager.get_item("jobs_path") or get_default_path('data')
+    temp_path = state_manager.get_item("temp_path") or get_default_path('temp')
+    cache_path = get_default_path('cache')
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    return [
+        os.path.abspath(jobs_path),
+        os.path.abspath(temp_path),
+        os.path.abspath(cache_path),
+        root_dir
+    ]
+
+
+def validate_safe_path(target_path: str, allowed_dirs: Optional[List[str]] = None) -> str:
+    if allowed_dirs is None:
+        allowed_dirs = get_allowed_directories()
+    abs_target = os.path.abspath(target_path)
+    for allowed in allowed_dirs:
+        abs_allowed = os.path.abspath(allowed)
+        try:
+            if os.path.commonpath([abs_target, abs_allowed]) == abs_allowed:
+                return abs_target
+        except ValueError:
+            continue
+    raise HTTPException(status_code=400, detail=f"Acesso negado: o arquivo '{target_path}' reside fora dos diretórios autorizados.")
 
 
 
@@ -46,6 +73,23 @@ class JobCreateRequest(BaseModel):
     face_enhancer_weight: Optional[float] = 1.0
     frame_enhancer_model: Optional[str] = "span_kendata_x4"
     frame_enhancer_blend: Optional[int] = 80
+    # Additional processors options
+    face_editor_model: Optional[str] = None
+    face_editor_eyebrow_direction: Optional[float] = None
+    face_editor_eye_gaze_horizontal: Optional[float] = None
+    face_editor_eye_gaze_vertical: Optional[float] = None
+    face_editor_eye_open_ratio: Optional[float] = None
+    face_editor_lip_open_ratio: Optional[float] = None
+    face_editor_mouth_smile: Optional[float] = None
+    face_editor_head_pitch: Optional[float] = None
+    face_editor_head_yaw: Optional[float] = None
+    face_editor_head_roll: Optional[float] = None
+    age_modifier_model: Optional[str] = None
+    age_modifier_direction: Optional[int] = None
+    lip_syncer_model: Optional[str] = None
+    lip_syncer_weight: Optional[float] = None
+    expression_restorer_model: Optional[str] = None
+    expression_restorer_factor: Optional[float] = None
     mappings: Optional[List[FaceMapping]] = None
 
 
@@ -164,24 +208,24 @@ def upload_media(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Erro no upload da mídia: {str(e)}")
 
 
-@router.get("/media/upload/{filename}")
+@router.get("/media/upload/{filename:path}")
 def get_upload_file(filename: str):
     """
-    Retorna um arquivo de mídia enviado para a pasta temporária.
+    Retorna um arquivo de mídia enviado para a pasta temporária ou recortes de análise.
     """
     jobs_path = state_manager.get_item("jobs_path") or get_default_path('data')
     uploads_dir = os.path.abspath(os.path.join(jobs_path, "uploads"))
     file_path = os.path.abspath(os.path.join(uploads_dir, filename))
     
-    if not file_path.startswith(uploads_dir):
-        raise HTTPException(status_code=400, detail="Caminho de arquivo inválido")
+    # Previne path traversal
+    safe_path = validate_safe_path(file_path, [uploads_dir])
         
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
+    if os.path.exists(safe_path):
+        return FileResponse(safe_path)
     raise HTTPException(status_code=404, detail="Arquivo de mídia não encontrado")
 
 
-@router.get("/media/output/{filename}")
+@router.get("/media/output/{filename:path}")
 def get_output_file(filename: str):
     """
     Retorna o arquivo final gerado pelo processamento.
@@ -190,11 +234,11 @@ def get_output_file(filename: str):
     outputs_dir = os.path.abspath(os.path.join(jobs_path, "outputs"))
     file_path = os.path.abspath(os.path.join(outputs_dir, filename))
     
-    if not file_path.startswith(outputs_dir):
-        raise HTTPException(status_code=400, detail="Caminho de arquivo inválido")
+    # Previne path traversal
+    safe_path = validate_safe_path(file_path, [outputs_dir])
         
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
+    if os.path.exists(safe_path):
+        return FileResponse(safe_path)
     raise HTTPException(status_code=404, detail="Arquivo de mídia não encontrado")
 
 
@@ -281,6 +325,66 @@ def get_job_status(job_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]
     }
 
 
+def apply_processor_args(step_args: Dict[str, Any], request: JobCreateRequest) -> None:
+    if request.face_swapper_model is not None:
+        step_args["face_swapper_model"] = request.face_swapper_model
+    if request.face_swapper_pixel_boost is not None:
+        step_args["face_swapper_pixel_boost"] = request.face_swapper_pixel_boost
+    if request.face_swapper_weight is not None:
+        step_args["face_swapper_weight"] = request.face_swapper_weight
+    if request.face_mask_blur is not None:
+        step_args["face_mask_blur"] = request.face_mask_blur
+    if request.detection_threshold is not None:
+        step_args["face_detector_score"] = request.detection_threshold
+        step_args["face_landmarker_score"] = request.detection_threshold
+    if request.trim_frame_start is not None:
+        step_args["trim_frame_start"] = request.trim_frame_start
+    if request.trim_frame_end is not None:
+        step_args["trim_frame_end"] = request.trim_frame_end
+    if request.face_enhancer_model is not None:
+        step_args["face_enhancer_model"] = request.face_enhancer_model
+    if request.face_enhancer_blend is not None:
+        step_args["face_enhancer_blend"] = request.face_enhancer_blend
+    if request.face_enhancer_weight is not None:
+        step_args["face_enhancer_weight"] = request.face_enhancer_weight
+    if request.frame_enhancer_model is not None:
+        step_args["frame_enhancer_model"] = request.frame_enhancer_model
+    if request.frame_enhancer_blend is not None:
+        step_args["frame_enhancer_blend"] = request.frame_enhancer_blend
+    if request.face_editor_model is not None:
+        step_args["face_editor_model"] = request.face_editor_model
+    if request.face_editor_eyebrow_direction is not None:
+        step_args["face_editor_eyebrow_direction"] = request.face_editor_eyebrow_direction
+    if request.face_editor_eye_gaze_horizontal is not None:
+        step_args["face_editor_eye_gaze_horizontal"] = request.face_editor_eye_gaze_horizontal
+    if request.face_editor_eye_gaze_vertical is not None:
+        step_args["face_editor_eye_gaze_vertical"] = request.face_editor_eye_gaze_vertical
+    if request.face_editor_eye_open_ratio is not None:
+        step_args["face_editor_eye_open_ratio"] = request.face_editor_eye_open_ratio
+    if request.face_editor_lip_open_ratio is not None:
+        step_args["face_editor_lip_open_ratio"] = request.face_editor_lip_open_ratio
+    if request.face_editor_mouth_smile is not None:
+        step_args["face_editor_mouth_smile"] = request.face_editor_mouth_smile
+    if request.face_editor_head_pitch is not None:
+        step_args["face_editor_head_pitch"] = request.face_editor_head_pitch
+    if request.face_editor_head_yaw is not None:
+        step_args["face_editor_head_yaw"] = request.face_editor_head_yaw
+    if request.face_editor_head_roll is not None:
+        step_args["face_editor_head_roll"] = request.face_editor_head_roll
+    if request.age_modifier_model is not None:
+        step_args["age_modifier_model"] = request.age_modifier_model
+    if request.age_modifier_direction is not None:
+        step_args["age_modifier_direction"] = request.age_modifier_direction
+    if request.lip_syncer_model is not None:
+        step_args["lip_syncer_model"] = request.lip_syncer_model
+    if request.lip_syncer_weight is not None:
+        step_args["lip_syncer_weight"] = request.lip_syncer_weight
+    if request.expression_restorer_model is not None:
+        step_args["expression_restorer_model"] = request.expression_restorer_model
+    if request.expression_restorer_factor is not None:
+        step_args["expression_restorer_factor"] = request.expression_restorer_factor
+
+
 @router.post("/jobs")
 def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
@@ -293,19 +397,21 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
         outputs_dir = os.path.join(jobs_path, "outputs")
         create_directory(outputs_dir)
 
-        # Resolução automática de caminhos de mídia
+        # Resolução automática de caminhos de mídia com validação segura
         resolved_source_paths = []
         for path in request.source_paths:
             if path.startswith("/api/media/upload/"):
                 filename = os.path.basename(path)
-                resolved_source_paths.append(os.path.join(uploads_dir, filename))
+                resolved_source_paths.append(validate_safe_path(os.path.join(uploads_dir, filename)))
             else:
-                resolved_source_paths.append(path)
+                resolved_source_paths.append(validate_safe_path(path))
                 
         resolved_target_path = request.target_path
         if request.target_path.startswith("/api/media/upload/"):
             filename = os.path.basename(request.target_path)
-            resolved_target_path = os.path.join(uploads_dir, filename)
+            resolved_target_path = validate_safe_path(os.path.join(uploads_dir, filename))
+        else:
+            resolved_target_path = validate_safe_path(request.target_path)
 
         from facefusion.filesystem import is_image, is_video
         
@@ -337,6 +443,7 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
                 resolved_mapping_source = mapping.source_path
                 if mapping.source_path.startswith("/api/media/upload/"):
                     resolved_mapping_source = os.path.join(uploads_dir, os.path.basename(mapping.source_path))
+                resolved_mapping_source = validate_safe_path(resolved_mapping_source)
 
                 if not os.path.exists(resolved_mapping_source):
                     raise HTTPException(status_code=400, detail=f"Arquivo de origem mapeado não encontrado no disco: {resolved_mapping_source}")
@@ -359,33 +466,7 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
                 step_args["reference_frame_number"] = mapping.reference_frame_number
                 step_args["reference_target_path"] = resolved_target_path
 
-                if request.face_swapper_model is not None:
-                    step_args["face_swapper_model"] = request.face_swapper_model
-                if request.face_swapper_pixel_boost is not None:
-                    step_args["face_swapper_pixel_boost"] = request.face_swapper_pixel_boost
-                if request.face_swapper_weight is not None:
-                    step_args["face_swapper_weight"] = request.face_swapper_weight
-                if request.face_mask_blur is not None:
-                    step_args["face_mask_blur"] = request.face_mask_blur
-                if request.detection_threshold is not None:
-                    step_args["face_detector_score"] = request.detection_threshold
-                    step_args["face_landmarker_score"] = request.detection_threshold
-                if request.trim_frame_start is not None:
-                    step_args["trim_frame_start"] = request.trim_frame_start
-                if request.trim_frame_end is not None:
-                    step_args["trim_frame_end"] = request.trim_frame_end
-
-                # Adicionar opções de Enhancers nos passos sequenciais
-                if request.face_enhancer_model is not None:
-                    step_args["face_enhancer_model"] = request.face_enhancer_model
-                if request.face_enhancer_blend is not None:
-                    step_args["face_enhancer_blend"] = request.face_enhancer_blend
-                if request.face_enhancer_weight is not None:
-                    step_args["face_enhancer_weight"] = request.face_enhancer_weight
-                if request.frame_enhancer_model is not None:
-                    step_args["frame_enhancer_model"] = request.frame_enhancer_model
-                if request.frame_enhancer_blend is not None:
-                    step_args["frame_enhancer_blend"] = request.frame_enhancer_blend
+                apply_processor_args(step_args, request)
 
                 if not job_manager.add_step(job_id, step_args):
                     raise HTTPException(status_code=500, detail=f"Falha ao adicionar passo {idx} ao job.")
@@ -397,33 +478,7 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
             step_args["output_path"] = output_path
             step_args["processors"] = request.processors
 
-            if request.face_swapper_model is not None:
-                step_args["face_swapper_model"] = request.face_swapper_model
-            if request.face_swapper_pixel_boost is not None:
-                step_args["face_swapper_pixel_boost"] = request.face_swapper_pixel_boost
-            if request.face_swapper_weight is not None:
-                step_args["face_swapper_weight"] = request.face_swapper_weight
-            if request.face_mask_blur is not None:
-                step_args["face_mask_blur"] = request.face_mask_blur
-            if request.detection_threshold is not None:
-                step_args["face_detector_score"] = request.detection_threshold
-                step_args["face_landmarker_score"] = request.detection_threshold
-            if request.trim_frame_start is not None:
-                step_args["trim_frame_start"] = request.trim_frame_start
-            if request.trim_frame_end is not None:
-                step_args["trim_frame_end"] = request.trim_frame_end
-
-            # Adicionar opções de Enhancers no passo único
-            if request.face_enhancer_model is not None:
-                step_args["face_enhancer_model"] = request.face_enhancer_model
-            if request.face_enhancer_blend is not None:
-                step_args["face_enhancer_blend"] = request.face_enhancer_blend
-            if request.face_enhancer_weight is not None:
-                step_args["face_enhancer_weight"] = request.face_enhancer_weight
-            if request.frame_enhancer_model is not None:
-                step_args["frame_enhancer_model"] = request.frame_enhancer_model
-            if request.frame_enhancer_blend is not None:
-                step_args["frame_enhancer_blend"] = request.frame_enhancer_blend
+            apply_processor_args(step_args, request)
 
             if not job_manager.add_step(job_id, step_args):
                 raise HTTPException(status_code=500, detail="Falha ao adicionar step ao job.")
@@ -464,11 +519,18 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
 def delete_job(job_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Exclui uma tarefa do banco de dados, seus arquivos de job no disco e a mídia de saída se gerada.
+    Impede a exclusão direta se a tarefa estiver em processamento ativo (necessário cancelar antes).
     """
     job = db.query(JobModel).filter_by(id=job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     
+    if job.status == "processing":
+        raise HTTPException(
+            status_code=400,
+            detail="Não é possível excluir uma tarefa em processamento ativo. Cancele-a antes de excluir."
+        )
+
     try:
         # Excluir arquivos de job no disco
         job_manager.delete_job(job_id)
@@ -485,14 +547,113 @@ def delete_job(job_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
         db.commit()
         
         return {"status": "success", "message": f"Job {job_id} excluído com sucesso."}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao excluir job: {str(e)}")
 
 
-@router.get("/diagnostic/export")
-def export_diagnostic():
+@router.post("/jobs/{job_id}/cancel")
+def cancel_job(job_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
-    Gera um pacote ZIP contendo logs e configurações higienizados (sem PII ou segredos).
+    Cancela uma tarefa em fila ou em processamento ativo com segurança.
+    """
+    job = db.query(JobModel).filter_by(id=job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        
+    if job.status in ("completed", "failed"):
+        return {"status": "info", "message": f"A tarefa {job_id} já está finalizada ({job.status})."}
+        
+    if job.status == "queued":
+        job.status = "failed"
+        job.progress = 0
+        job.error_message = "Cancelado pelo usuário na fila."
+        db.commit()
+        return {"status": "success", "message": f"Tarefa {job_id} cancelada na fila."}
+        
+    if job.status == "processing":
+        from facefusion.api.worker import cancel_running_job
+        cancel_running_job(job_id)
+        job.status = "failed"
+        job.progress = 0
+        job.error_message = "Cancelado pelo usuário durante o processamento."
+        db.commit()
+        return {"status": "success", "message": f"Sinal de cancelamento enviado para a tarefa {job_id}."}
+
+    return {"status": "unknown", "message": f"Status desconhecido da tarefa: {job.status}"}
+
+
+@router.get("/jobs/stream")
+async def stream_jobs():
+    """
+    Server-Sent Events (SSE) endpoint que envia atualizações da lista de jobs
+    em tempo real para o cockpit, reduzindo overhead de polling HTTP contínuo.
+    """
+    import asyncio
+    from fastapi.responses import StreamingResponse
+
+    async def event_generator():
+        last_hash = ""
+        while True:
+            try:
+                db = SessionLocal()
+                jobs = db.query(JobModel).order_by(desc(JobModel.created_at)).limit(50).all()
+                data = [
+                    {
+                        "id": j.id,
+                        "status": j.status,
+                        "progress": j.progress,
+                        "step": j.step,
+                        "error_message": j.error_message,
+                        "output_path": j.output_path,
+                        "outputUrl": f"/api/media/output/{os.path.basename(j.output_path)}" if j.output_path and os.path.exists(j.output_path) else None,
+                        "created_at": j.created_at.isoformat() if j.created_at else None,
+                        "updated_at": j.updated_at.isoformat() if j.updated_at else None
+                    }
+                    for j in jobs
+                ]
+                db.close()
+                current_hash = f"{len(data)}:" + ";".join(f"{item['id']}-{item['status']}-{item['progress']}-{item['step']}" for item in data)
+                if current_hash != last_hash:
+                    last_hash = current_hash
+                    yield f"data: {json.dumps(data)}\n\n"
+            except Exception as e:
+                yield f": heartbeat {str(e)}\n\n"
+            await asyncio.sleep(1.0)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.post("/media/cleanup")
+def cleanup_temporary_media() -> Dict[str, Any]:
+    """
+    Exclui arquivos temporários de crops e previews efêmeros para evitar esgotamento de disco.
+    """
+    try:
+        jobs_path = state_manager.get_item("jobs_path") or get_default_path('data')
+        uploads_dir = os.path.abspath(os.path.join(jobs_path, "uploads"))
+        crops_dir = os.path.join(uploads_dir, "crops")
+        cleaned_count = 0
+        if os.path.exists(crops_dir):
+            for fname in os.listdir(crops_dir):
+                fpath = os.path.join(crops_dir, fname)
+                try:
+                    if os.path.isfile(fpath):
+                        os.remove(fpath)
+                        cleaned_count += 1
+                except Exception:
+                    pass
+        return {"status": "success", "message": f"{cleaned_count} arquivos de cache/crops removidos com sucesso."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro na limpeza de mídia temporária: {str(e)}")
+
+
+@router.get("/diagnostic/export")
+def export_diagnostic(background_tasks: BackgroundTasks):
+    """
+    Gera um pacote ZIP contendo logs e configurações higienizados (sem PII ou segredos),
+    e remove automaticamente o arquivo temporário após o download.
     """
     import tempfile
     import zipfile
@@ -513,8 +674,10 @@ def export_diagnostic():
         
         def sanitize_text(text: str) -> str:
             import re
-            # Mascarar caminhos de usuário no Linux / macOS
+            # Mascarar caminhos de usuário no Linux
             text = re.sub(r'/home/[a-zA-Z0-9_-]+', '/home/user', text)
+            # Mascarar caminhos de usuário no macOS
+            text = re.sub(r'/Users/[a-zA-Z0-9_-]+', '/Users/user', text)
             # Mascarar caminhos de usuário no Windows
             text = re.sub(r'[cC]:\\Users\\[a-zA-Z0-9_-]+', 'C:\\Users\\user', text)
             # Mascarar possíveis tokens/senhas
@@ -556,8 +719,12 @@ def export_diagnostic():
             }
             zipf.writestr('system_info.json', json.dumps(system_info, indent=4))
             
+        # Agendar remoção do zip temporário após o streaming para o cliente
+        background_tasks.add_task(os.remove, temp_zip_name)
+
         return FileResponse(
             temp_zip_name,
+            background=background_tasks,
             media_type="application/zip",
             filename="facefusion_diagnostic.zip"
         )
@@ -581,6 +748,23 @@ class PreviewRequest(BaseModel):
     face_enhancer_weight: Optional[float] = 1.0
     frame_enhancer_model: Optional[str] = "span_kendata_x4"
     frame_enhancer_blend: Optional[int] = 80
+    # Additional processors options
+    face_editor_model: Optional[str] = None
+    face_editor_eyebrow_direction: Optional[float] = None
+    face_editor_eye_gaze_horizontal: Optional[float] = None
+    face_editor_eye_gaze_vertical: Optional[float] = None
+    face_editor_eye_open_ratio: Optional[float] = None
+    face_editor_lip_open_ratio: Optional[float] = None
+    face_editor_mouth_smile: Optional[float] = None
+    face_editor_head_pitch: Optional[float] = None
+    face_editor_head_yaw: Optional[float] = None
+    face_editor_head_roll: Optional[float] = None
+    age_modifier_model: Optional[str] = None
+    age_modifier_direction: Optional[int] = None
+    lip_syncer_model: Optional[str] = None
+    lip_syncer_weight: Optional[float] = None
+    expression_restorer_model: Optional[str] = None
+    expression_restorer_factor: Optional[float] = None
 
 
 @router.post("/preview")
@@ -598,7 +782,7 @@ def generate_preview(request: PreviewRequest):
         from facefusion.vision import read_static_image, read_static_images, read_video_frame, extract_vision_mask, merge_vision_mask, restrict_frame, unpack_resolution, detect_video_fps
         from facefusion.audio import create_empty_audio_frame
         from facefusion.processors.core import get_processors_modules
-        from facefusion.filesystem import is_image, is_video
+        from facefusion.filesystem import is_image, is_video, get_default_path
         from facefusion import state_manager as sm, logger as ff_logger
 
         # Resolver caminhos
@@ -609,14 +793,16 @@ def generate_preview(request: PreviewRequest):
         for path in request.source_paths:
             if path.startswith("/api/media/upload/"):
                 filename = os.path.basename(path)
-                resolved_source_paths.append(os.path.join(uploads_dir, filename))
+                resolved_source_paths.append(validate_safe_path(os.path.join(uploads_dir, filename)))
             else:
-                resolved_source_paths.append(path)
+                resolved_source_paths.append(validate_safe_path(path))
 
         resolved_target_path = request.target_path
         if request.target_path.startswith("/api/media/upload/"):
             filename = os.path.basename(request.target_path)
-            resolved_target_path = os.path.join(uploads_dir, filename)
+            resolved_target_path = validate_safe_path(os.path.join(uploads_dir, filename))
+        else:
+            resolved_target_path = validate_safe_path(request.target_path)
 
         # Validar que os arquivos existem e são válidos
         for sp in resolved_source_paths:
@@ -629,46 +815,67 @@ def generate_preview(request: PreviewRequest):
         if not (is_image(resolved_target_path) or is_video(resolved_target_path)):
             raise HTTPException(status_code=400, detail=f"Arquivo target com formato inválido ou corrompido: {resolved_target_path}")
 
-        # Configurar state_manager temporariamente para o preview
-        old_source = sm.get_item('source_paths')
-        old_target = sm.get_item('target_path')
-        old_processors = sm.get_item('processors')
-        old_face_swapper_model = sm.get_item('face_swapper_model')
-        old_face_swapper_pixel_boost = sm.get_item('face_swapper_pixel_boost')
-        old_face_enhancer_model = sm.get_item('face_enhancer_model')
-        old_face_enhancer_blend = sm.get_item('face_enhancer_blend')
-        old_face_enhancer_weight = sm.get_item('face_enhancer_weight')
-        old_frame_enhancer_model = sm.get_item('frame_enhancer_model')
-        old_frame_enhancer_blend = sm.get_item('frame_enhancer_blend')
-
-        sm.set_item('source_paths', resolved_source_paths)
-        sm.set_item('target_path', resolved_target_path)
-        sm.set_item('processors', request.processors)
-
+        # Montar overrides thread-safe para o preview
+        overrides = {
+            'source_paths': resolved_source_paths,
+            'target_path': resolved_target_path,
+            'processors': request.processors or ["face_swapper"],
+        }
         if request.face_swapper_model is not None:
-            sm.set_item('face_swapper_model', request.face_swapper_model)
+            overrides['face_swapper_model'] = request.face_swapper_model
         if request.face_swapper_pixel_boost is not None:
-            sm.set_item('face_swapper_pixel_boost', request.face_swapper_pixel_boost)
+            overrides['face_swapper_pixel_boost'] = request.face_swapper_pixel_boost
         if request.face_swapper_weight is not None:
-            sm.set_item('face_swapper_weight', request.face_swapper_weight)
+            overrides['face_swapper_weight'] = request.face_swapper_weight
         if request.face_mask_blur is not None:
-            sm.set_item('face_mask_blur', request.face_mask_blur)
+            overrides['face_mask_blur'] = request.face_mask_blur
         if request.detection_threshold is not None:
-            sm.set_item('face_detector_score', request.detection_threshold)
-            sm.set_item('face_landmarker_score', request.detection_threshold)
+            overrides['face_detector_score'] = request.detection_threshold
+            overrides['face_landmarker_score'] = request.detection_threshold
         if request.face_enhancer_model is not None:
-            sm.set_item('face_enhancer_model', request.face_enhancer_model)
+            overrides['face_enhancer_model'] = request.face_enhancer_model
         if request.face_enhancer_blend is not None:
-            sm.set_item('face_enhancer_blend', request.face_enhancer_blend)
+            overrides['face_enhancer_blend'] = request.face_enhancer_blend
         if request.face_enhancer_weight is not None:
-            sm.set_item('face_enhancer_weight', request.face_enhancer_weight)
+            overrides['face_enhancer_weight'] = request.face_enhancer_weight
         if request.frame_enhancer_model is not None:
-            sm.set_item('frame_enhancer_model', request.frame_enhancer_model)
+            overrides['frame_enhancer_model'] = request.frame_enhancer_model
         if request.frame_enhancer_blend is not None:
-            sm.set_item('frame_enhancer_blend', request.frame_enhancer_blend)
+            overrides['frame_enhancer_blend'] = request.frame_enhancer_blend
+        if request.face_editor_model is not None:
+            overrides['face_editor_model'] = request.face_editor_model
+        if request.face_editor_eyebrow_direction is not None:
+            overrides['face_editor_eyebrow_direction'] = request.face_editor_eyebrow_direction
+        if request.face_editor_eye_gaze_horizontal is not None:
+            overrides['face_editor_eye_gaze_horizontal'] = request.face_editor_eye_gaze_horizontal
+        if request.face_editor_eye_gaze_vertical is not None:
+            overrides['face_editor_eye_gaze_vertical'] = request.face_editor_eye_gaze_vertical
+        if request.face_editor_eye_open_ratio is not None:
+            overrides['face_editor_eye_open_ratio'] = request.face_editor_eye_open_ratio
+        if request.face_editor_lip_open_ratio is not None:
+            overrides['face_editor_lip_open_ratio'] = request.face_editor_lip_open_ratio
+        if request.face_editor_mouth_smile is not None:
+            overrides['face_editor_mouth_smile'] = request.face_editor_mouth_smile
+        if request.face_editor_head_pitch is not None:
+            overrides['face_editor_head_pitch'] = request.face_editor_head_pitch
+        if request.face_editor_head_yaw is not None:
+            overrides['face_editor_head_yaw'] = request.face_editor_head_yaw
+        if request.face_editor_head_roll is not None:
+            overrides['face_editor_head_roll'] = request.face_editor_head_roll
+        if request.age_modifier_model is not None:
+            overrides['age_modifier_model'] = request.age_modifier_model
+        if request.age_modifier_direction is not None:
+            overrides['age_modifier_direction'] = request.age_modifier_direction
+        if request.lip_syncer_model is not None:
+            overrides['lip_syncer_model'] = request.lip_syncer_model
+        if request.lip_syncer_weight is not None:
+            overrides['lip_syncer_weight'] = request.lip_syncer_weight
+        if request.expression_restorer_model is not None:
+            overrides['expression_restorer_model'] = request.expression_restorer_model
+        if request.expression_restorer_factor is not None:
+            overrides['expression_restorer_factor'] = request.expression_restorer_factor
 
-        try:
-            # Garantir que os modelos dos processadores selecionados estejam baixados
+        with sm.temporary_state(overrides):
             processors = request.processors or []
             for processor_module in get_processors_modules(processors):
                 if not processor_module.pre_check():
@@ -698,18 +905,17 @@ def generate_preview(request: PreviewRequest):
                 if len(target_vision_frame.shape) == 3 and target_vision_frame.shape[2] == 3:
                     target_vision_frame = cv2.cvtColor(target_vision_frame, cv2.COLOR_BGR2BGRA)
             else:
-                raise HTTPException(status_code=400, detail="Formato de mídia de destino não suportado.")
+                raise HTTPException(status_code=400, detail="Formato de target não suportado.")
 
-            if reference_vision_frame is None or target_vision_frame is None:
-                raise HTTPException(status_code=400, detail="Não foi possível ler a mídia de destino.")
+            if target_vision_frame is None:
+                raise HTTPException(status_code=400, detail="Frame de destino está vazio.")
 
-            # Processar preview (mesma lógica do Gradio preview.py)
+            # Redimensionar temporariamente para otimizar velocidade de preview
             preview_resolution = '1024x1024'
             temp_vision_frame = restrict_frame(target_vision_frame, unpack_resolution(preview_resolution))
             temp_vision_frame_copy = temp_vision_frame.copy()
             temp_vision_mask = extract_vision_mask(temp_vision_frame_copy)
 
-            processors = request.processors or []
             for processor_module in get_processors_modules(processors):
                 ff_logger.disable()
                 if processor_module.pre_process('preview'):
@@ -746,29 +952,6 @@ def generate_preview(request: PreviewRequest):
                 "status": "success"
             }
 
-        finally:
-            # Restaurar state_manager
-            if old_source is not None:
-                sm.set_item('source_paths', old_source)
-            if old_target is not None:
-                sm.set_item('target_path', old_target)
-            if old_processors is not None:
-                sm.set_item('processors', old_processors)
-            if old_face_swapper_model is not None:
-                sm.set_item('face_swapper_model', old_face_swapper_model)
-            if old_face_swapper_pixel_boost is not None:
-                sm.set_item('face_swapper_pixel_boost', old_face_swapper_pixel_boost)
-            if old_face_enhancer_model is not None:
-                sm.set_item('face_enhancer_model', old_face_enhancer_model)
-            if old_face_enhancer_blend is not None:
-                sm.set_item('face_enhancer_blend', old_face_enhancer_blend)
-            if old_face_enhancer_weight is not None:
-                sm.set_item('face_enhancer_weight', old_face_enhancer_weight)
-            if old_frame_enhancer_model is not None:
-                sm.set_item('frame_enhancer_model', old_frame_enhancer_model)
-            if old_frame_enhancer_blend is not None:
-                sm.set_item('frame_enhancer_blend', old_frame_enhancer_blend)
-
     except HTTPException:
         raise
     except Exception as e:
@@ -794,7 +977,10 @@ def analyze_faces(request: FaceAnalyzeRequest):
         from facefusion.filesystem import is_image, is_video, get_default_path
         from facefusion.vision import read_static_image, read_video_frame, detect_video_fps
         from facefusion.face_selector import sort_and_filter_faces
-        from facefusion.face_analyser import get_many_faces
+        try:
+            from facefusion.face_analyser import get_many_faces
+        except ImportError:
+            from facefusion.face_creator import get_many_faces
         from facefusion import face_detector, face_landmarker, face_recognizer, face_classifier
         import cv2
         import numpy as np
@@ -802,11 +988,14 @@ def analyze_faces(request: FaceAnalyzeRequest):
         # 1. Resolver caminhos
         jobs_path = sm.get_item("jobs_path") or get_default_path('data')
         uploads_dir = os.path.abspath(os.path.join(jobs_path, "uploads"))
+        crops_dir = os.path.join(uploads_dir, "crops")
+        os.makedirs(crops_dir, exist_ok=True)
         
-        resolved_path = request.file_path
         if request.file_path.startswith("/api/media/upload/"):
             filename = os.path.basename(request.file_path)
-            resolved_path = os.path.join(uploads_dir, filename)
+            resolved_path = validate_safe_path(os.path.join(uploads_dir, filename))
+        else:
+            resolved_path = validate_safe_path(request.file_path)
             
         if not os.path.exists(resolved_path):
             raise HTTPException(status_code=400, detail=f"Arquivo não encontrado: {resolved_path}")
@@ -833,17 +1022,10 @@ def analyze_faces(request: FaceAnalyzeRequest):
         if frame is None:
             raise HTTPException(status_code=400, detail="Não foi possível ler o frame da mídia.")
 
-        # 4. Detectar e classificar os rostos
-        # Configurar ordenação padrão temporariamente para o filtro retornar índices previsíveis
-        old_selector_order = sm.get_item('face_selector_order')
-        if not old_selector_order:
-            sm.set_item('face_selector_order', 'large-small')
-        
-        detected_faces = get_many_faces([frame])
-        sorted_faces = sort_and_filter_faces(detected_faces)
-        
-        if old_selector_order:
-            sm.set_item('face_selector_order', old_selector_order)
+        # 4. Detectar e classificar os rostos de forma thread-safe
+        with sm.temporary_state({'face_selector_order': 'large-small'}):
+            detected_faces = get_many_faces([frame])
+            sorted_faces = sort_and_filter_faces(detected_faces)
 
         # 5. Salvar recortes e estruturar retorno
         results = []
@@ -859,7 +1041,7 @@ def analyze_faces(request: FaceAnalyzeRequest):
             if x_max > x_min and y_max > y_min:
                 crop = frame[y_min:y_max, x_min:x_max]
                 crop_filename = f"crop_{uuid.uuid4().hex[:12]}.jpg"
-                crop_path = os.path.join(uploads_dir, crop_filename)
+                crop_path = os.path.join(crops_dir, crop_filename)
                 
                 # Converter de RGBA/BGR para BGR caso necessário antes de gravar
                 if len(crop.shape) == 3 and crop.shape[2] == 4:
@@ -868,7 +1050,7 @@ def analyze_faces(request: FaceAnalyzeRequest):
                     crop_bgr = crop
                     
                 cv2.imwrite(crop_path, crop_bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
-                crop_url = f"/api/media/upload/{crop_filename}"
+                crop_url = f"/api/media/upload/crops/{crop_filename}"
 
             # Formatar a idade como string legível
             age_str = f"{face.age.start}-{face.age.stop - 1}" if hasattr(face.age, "start") else str(face.age)

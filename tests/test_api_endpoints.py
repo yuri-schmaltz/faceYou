@@ -328,3 +328,55 @@ def test_export_diagnostic_endpoint() -> None:
     assert len(response.content) > 0
 
 
+def test_cancel_job_endpoint() -> None:
+    """Verifica se o cancelamento de uma tarefa na fila atualiza seu status para failed."""
+    db = TestingSessionLocal()
+    mock_job = JobModel(
+        id="job-cancel-test-id",
+        status="queued",
+        progress=0,
+        source_paths='["/fake/source.jpg"]',
+        target_path="/fake/target.mp4"
+    )
+    db.add(mock_job)
+    db.commit()
+    db.close()
+
+    response = client.post("/api/jobs/job-cancel-test-id/cancel")
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+    db = TestingSessionLocal()
+    job_in_db = db.query(JobModel).filter_by(id="job-cancel-test-id").first()
+    assert job_in_db is not None
+    assert job_in_db.status == "failed"
+    assert "Cancelado" in job_in_db.error_message
+    db.close()
+
+
+def test_delete_processing_job_blocked() -> None:
+    """Verifica que a exclusão direta de um job em processamento é bloqueada com HTTP 400."""
+    db = TestingSessionLocal()
+    mock_job = JobModel(
+        id="job-processing-test-id",
+        status="processing",
+        progress=50,
+        source_paths='["/fake/source.jpg"]',
+        target_path="/fake/target.mp4"
+    )
+    db.add(mock_job)
+    db.commit()
+    db.close()
+
+    response = client.delete("/api/jobs/job-processing-test-id")
+    assert response.status_code == 400
+    assert "Não é possível excluir" in response.json()["detail"]
+
+
+def test_cleanup_media_endpoint() -> None:
+    """Verifica se a rota de limpeza de mídia temporária responde com sucesso."""
+    response = client.post("/api/media/cleanup")
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+

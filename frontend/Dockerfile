@@ -16,20 +16,19 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine AS runner
-WORKDIR /app
+# Production stage - serve static export with lightweight nginx
+FROM nginx:alpine AS runner
+WORKDIR /usr/share/nginx/html
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# Clear default nginx HTML files
+RUN rm -rf ./*
 
-# Copiar arquivos construídos e dependências de produção do build stage
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.ts ./
+# Copy exported static files from build stage
+COPY --from=builder /app/out ./
+
+# Expose port 3000 and configure nginx
+RUN sed -i 's/listen       80;/listen       3000;/' /etc/nginx/conf.d/default.conf
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["nginx", "-g", "daemon off;"]

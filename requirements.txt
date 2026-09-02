@@ -8,3 +8,7 @@ tqdm==4.67.3
 scipy==1.17.1
 tensorflow>=2.16.1
 tensorrt>=10.0.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+sqlalchemy>=2.0.28
+python-multipart>=0.0.9

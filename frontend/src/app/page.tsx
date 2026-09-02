@@ -1,669 +1,214 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import {
-  LayoutDashboard,
-  PlusCircle,
-  FolderOpen,
-  Settings,
-  User,
-  Bell,
-  LogOut,
-  Search,
-  Upload,
-  RefreshCw,
-  Play,
-  Pause,
-  Video,
-  Image as ImageIcon,
-  CheckCircle,
-  AlertCircle,
-  Sliders,
-  ChevronDown,
-  Maximize2,
-  Volume2,
-  VolumeX,
-  Trash2,
-  Download,
-  ExternalLink,
-  Cpu,
-  Folder,
-  Terminal,
-  SlidersHorizontal,
-  X,
-  Check,
-  Info,
-  Eye,
-  Plus,
-  Save
-} from "lucide-react";
-
-/* ======================================== */
-/* Toast Notification System                */
-/* ======================================== */
-interface Toast {
-  id: string;
-  type: "success" | "error" | "info" | "warning";
-  title: string;
-  message?: string;
-  exiting?: boolean;
-}
-
-function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
-  return (
-    <div className="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm">
-      {toasts.map((toast) => {
-        const colors = {
-          success: { bg: "bg-emerald-500/10", border: "border-emerald-500/30", icon: "text-emerald-400", bar: "bg-emerald-500" },
-          error: { bg: "bg-red-500/10", border: "border-red-500/30", icon: "text-red-400", bar: "bg-red-500" },
-          info: { bg: "bg-blue-500/10", border: "border-blue-500/30", icon: "text-blue-400", bar: "bg-blue-500" },
-          warning: { bg: "bg-amber-500/10", border: "border-amber-500/30", icon: "text-amber-400", bar: "bg-amber-500" },
-        }[toast.type];
-
-        const Icon = {
-          success: Check,
-          error: AlertCircle,
-          info: Info,
-          warning: AlertCircle,
-        }[toast.type];
-
-        return (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto ${toast.exiting ? 'animate-toast-exit' : 'animate-toast-enter'} ${colors.bg} ${colors.border} border backdrop-blur-xl rounded-xl p-4 shadow-2xl shadow-black/40 flex items-start gap-3 min-w-[280px]`}
-          >
-            <div className={`flex-shrink-0 mt-0.5 ${colors.icon}`}>
-              <Icon size={18} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white">{toast.title}</p>
-              {toast.message && <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{toast.message}</p>}
-            </div>
-            <button
-              onClick={() => onDismiss(toast.id)}
-              className="flex-shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ======================================== */
-/* Main Component                           */
-/* ======================================== */
-interface Job {
-  id: string;
-  type: string;
-  status: "idle" | "processing" | "queued" | "completed" | "failed";
-  progress: number;
-  time?: string;
-  source?: string;
-  target?: string;
-  outputUrl?: string;
-  error_message?: string;
-  step?: string;
-}
-interface Preset {
-  name: string;
-  faceSwapperWeight: number;
-  faceMaskBlur: number;
-  detectionThreshold: number;
-  smoothing: number;
-  faceSwapperModel: string;
-  faceSwapperPixelBoost: string;
-  faceEnhancerModel?: string;
-  faceEnhancerBlend?: number;
-  faceEnhancerWeight?: number;
-  frameEnhancerModel?: string;
-  frameEnhancerBlend?: number;
-  isCustom?: boolean;
-}
-
-const BUILT_IN_PRESETS: Preset[] = [
-  {
-    name: "Qualidade Máxima (Padrão)",
-    faceSwapperWeight: 0.85,
-    faceMaskBlur: 12,
-    detectionThreshold: 0.70,
-    smoothing: 5,
-    faceSwapperModel: "inswapper_128_fp16",
-    faceSwapperPixelBoost: "512x512",
-    faceEnhancerModel: "gfpgan_1.4",
-    faceEnhancerBlend: 80,
-    faceEnhancerWeight: 1.0,
-    frameEnhancerModel: "span_kendata_x4",
-    frameEnhancerBlend: 80,
-    isCustom: false
-  },
-  {
-    name: "Draft Rápido",
-    faceSwapperWeight: 0.70,
-    faceMaskBlur: 8,
-    detectionThreshold: 0.50,
-    smoothing: 3,
-    faceSwapperModel: "inswapper_128",
-    faceSwapperPixelBoost: "",
-    faceEnhancerModel: "gfpgan_1.4",
-    faceEnhancerBlend: 50,
-    faceEnhancerWeight: 0.5,
-    frameEnhancerModel: "span_kendata_x4",
-    frameEnhancerBlend: 50,
-    isCustom: false
-  },
-  {
-    name: "Cinemático Ultra",
-    faceSwapperWeight: 0.90,
-    faceMaskBlur: 15,
-    detectionThreshold: 0.75,
-    smoothing: 8,
-    faceSwapperModel: "simswap_unofficial_512",
-    faceSwapperPixelBoost: "1024x1024",
-    faceEnhancerModel: "codeformer",
-    faceEnhancerBlend: 90,
-    faceEnhancerWeight: 1.0,
-    frameEnhancerModel: "real_esrgan_x4_fp16",
-    frameEnhancerBlend: 90,
-    isCustom: false
-  }
-];
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Play, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
+import { Toast, SourceItem, DetectedFace, Job } from "../types";
+import { resolveApiUrl, formatApiUrl } from "../utils/api";
+import { useJobs } from "../hooks/useJobs";
+import { useHardware } from "../hooks/useHardware";
+import { usePresets } from "../hooks/usePresets";
+import { ToastContainer } from "../components/ToastContainer";
+import { Header } from "../components/Header";
+import { Sidebar } from "../components/Sidebar";
+import { SourceUploader } from "../components/SourceUploader";
+import { TargetMediaViewer } from "../components/TargetMediaViewer";
+import { FaceMappingModal } from "../components/FaceMappingModal";
+import { ProcessorSettings } from "../components/ProcessorSettings";
+import { VideoComparator } from "../components/VideoComparator";
+import { JobsList } from "../components/JobsList";
+import { SettingsModal } from "../components/SettingsModal";
 
 export default function Home() {
+  // Configuração e conexão com a API
+  const [apiUrl, setApiUrl] = useState<string>("");
+  const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
+
   // Navegação
   const [activeTab, setActiveTab] = useState<"create_new" | "projects" | "settings">("create_new");
 
-  // Toast notifications
+  // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
-
   const showToast = useCallback((type: Toast["type"], title: string, message?: string) => {
-    const id = crypto.randomUUID();
+    const id = Math.random().toString(36).substring(2, 9);
     setToasts(prev => [...prev, { id, type, title, message }]);
     setTimeout(() => {
-      setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
+      setToasts(prev => prev.map(t => (t.id === id ? { ...t, exiting: true } : t)));
       setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id));
       }, 300);
-    }, 4500);
+    }, 4000);
   }, []);
 
   const dismissToast = useCallback((id: string) => {
-    setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 300);
+    setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // Configurações do Estado (Face Swap)
-  const [sourceImage, setSourceImage] = useState<string | null>(null);
+  // Inicializar API URL dinâmica
+  useEffect(() => {
+    resolveApiUrl().then(url => {
+      setApiUrl(url);
+    });
+  }, []);
+
+  // Custom Hooks
+  const { jobs, activeJob, cancelJob, deleteJob, fetchJobs } = useJobs(apiUrl);
+  const { hardwareInfo, availableProviders, fetchHardware } = useHardware(apiUrl);
+  const {
+    presets,
+    selectedPresetName,
+    setSelectedPresetName,
+    newPresetName,
+    setNewPresetName,
+    saveCustomPreset,
+  } = usePresets();
+
+  // Testar conexão com o backend
+  useEffect(() => {
+    if (apiUrl === null) return;
+    const testConnection = async () => {
+      try {
+        const pingUrl = formatApiUrl(apiUrl, "/api/hardware/devices");
+        const res = await fetch(pingUrl);
+        setIsBackendConnected(res.ok);
+      } catch {
+        setIsBackendConnected(false);
+      }
+    };
+    testConnection();
+    const interval = setInterval(testConnection, 8000);
+    return () => clearInterval(interval);
+  }, [apiUrl]);
+
+  // Mídia e Uploads
+  const [sourceItems, setSourceItems] = useState<SourceItem[]>([]);
   const [sourceImageFullPath, setSourceImageFullPath] = useState<string | null>(null);
-  const [sourceImageName, setSourceImageName] = useState<string>("");
-  const [sourceItems, setSourceItems] = useState<{ url: string; file_path: string; filename: string; }[]>([]);
-  const [detectedTargetFaces, setDetectedTargetFaces] = useState<{ index: number; bounding_box: number[]; gender: string; age: string; race: string; crop_url: string; }[]>([]);
-  const [isAnalyzingTargetFaces, setIsAnalyzingTargetFaces] = useState(false);
+
+  const [targetMedia, setTargetMedia] = useState<string | null>(null);
+  const [targetMediaFullPath, setTargetMediaFullPath] = useState<string | null>(null);
+  const [targetMediaName, setTargetMediaName] = useState<string>("");
+  const [targetVideoTime, setTargetVideoTime] = useState<number>(0);
+  const [processFromCurrentPoint, setProcessFromCurrentPoint] = useState<boolean>(false);
+
+  const [targetDimensions, setTargetDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [containerDimensions, setContainerDimensions] = useState<{ width: number; height: number } | null>(null);
+  const targetContainerRef = useRef<HTMLDivElement>(null);
+
+  // Mapeamento de Múltiplos Rostos
+  const [detectedTargetFaces, setDetectedTargetFaces] = useState<DetectedFace[]>([]);
+  const [isAnalyzingTargetFaces, setIsAnalyzingTargetFaces] = useState<boolean>(false);
+  const [selectedFaceForModal, setSelectedFaceForModal] = useState<DetectedFace | null>(null);
   const [faceMappings, setFaceMappings] = useState<Record<number, string>>({});
   const [referenceFrameNumber, setReferenceFrameNumber] = useState<number>(0);
 
-  const [targetVideo, setTargetVideo] = useState<string | null>(null);
-  const [targetVideoFullPath, setTargetVideoFullPath] = useState<string | null>(null);
-  const [targetVideoName, setTargetVideoName] = useState<string>("");
-  
-  const [faceSwapperWeight, setFaceSwapperWeight] = useState(0.85);
-  const [faceMaskBlur, setFaceMaskBlur] = useState(12);
-  const [detectionThreshold, setDetectionThreshold] = useState(0.70);
-  const [smoothing, setSmoothing] = useState(5);
-  const [autoPreview, setAutoPreview] = useState(true);
+  // Processadores & Parâmetros
+  const [availableProcessors, setAvailableProcessors] = useState<string[]>([
+    "face_swapper",
+    "face_enhancer",
+    "frame_enhancer",
+    "face_editor",
+    "age_modifier",
+    "expression_restorer"
+  ]);
+  const [selectedProcessors, setSelectedProcessors] = useState<string[]>(["face_swapper"]);
+  const [autoPreview, setAutoPreview] = useState<boolean>(true);
+
+  // Swapper options
+  const [faceSwapperWeight, setFaceSwapperWeight] = useState<number>(0.85);
+  const [faceMaskBlur, setFaceMaskBlur] = useState<number>(12);
+  const [detectionThreshold, setDetectionThreshold] = useState<number>(0.70);
+  const [smoothing, setSmoothing] = useState<number>(5);
   const [faceSwapperModel, setFaceSwapperModel] = useState<string>("inswapper_128_fp16");
   const [faceSwapperPixelBoost, setFaceSwapperPixelBoost] = useState<string>("512x512");
 
+  // Enhancer options
   const [faceEnhancerModel, setFaceEnhancerModel] = useState<string>("gfpgan_1.4");
   const [faceEnhancerBlend, setFaceEnhancerBlend] = useState<number>(80);
   const [faceEnhancerWeight, setFaceEnhancerWeight] = useState<number>(1.0);
   const [frameEnhancerModel, setFrameEnhancerModel] = useState<string>("span_kendata_x4");
   const [frameEnhancerBlend, setFrameEnhancerBlend] = useState<number>(80);
 
-  const [presets, setPresets] = useState<Preset[]>(BUILT_IN_PRESETS);
-  const [selectedPresetName, setSelectedPresetName] = useState<string>("Qualidade Máxima (Padrão)");
-  const [newPresetName, setNewPresetName] = useState<string>("");
+  // Additional processors options
+  const [faceEditorModel, setFaceEditorModel] = useState<string>("live_portrait");
+  const [faceEditorSmile, setFaceEditorSmile] = useState<number>(0);
+  const [ageModifierModel, setAgeModifierModel] = useState<string>("styleganex_age");
+  const [ageModifierDirection, setAgeModifierDirection] = useState<number>(0);
+  const [expressionRestorerFactor, setExpressionRestorerFactor] = useState<number>(0.8);
 
-  const [targetDimensions, setTargetDimensions] = useState<{ width: number; height: number } | null>(null);
-  const [containerDimensions, setContainerDimensions] = useState<{ width: number; height: number } | null>(null);
-  const [selectedFaceForModal, setSelectedFaceForModal] = useState<any | null>(null);
-
-  const targetContainerRef = useRef<HTMLDivElement>(null);
-
-  const [outputFormat, setOutputFormat] = useState("MP4");
-  const [outputQuality, setOutputQuality] = useState("High");
-  const [outputResolution, setOutputResolution] = useState("1080p");
-
-  // Comparador de Antes/Depois (posição da barra central de slide)
-  const [sliderPosition, setSliderPosition] = useState(65);
-  const [isSliding, setIsSliding] = useState(false);
-  const sliderContainerRef = useRef<HTMLDivElement>(null);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
-
-  // Vídeo Player & Comparator
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [videoDuration, setVideoDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
-  const originalVideoRef = useRef<HTMLVideoElement>(null);
-  const swappedVideoRef = useRef<HTMLVideoElement>(null);
-
-  // Drag & Drop
-  const [isDraggingSource, setIsDraggingSource] = useState(false);
-  const [isDraggingTarget, setIsDraggingTarget] = useState(false);
-
-  const formatTime = (secs: number) => {
-    if (isNaN(secs) || secs === 0) return "00:00";
-    const m = Math.floor(secs / 60).toString().padStart(2, "0");
-    const s = Math.floor(secs % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
-
-  // Lista de Jobs no Dashboard
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-
-  // Status de Hardware e Output
-  const [hardwareInfo, setHardwareInfo] = useState<string>("Buscando informações de hardware...");
+  // Export options
+  const [outputFormat, setOutputFormat] = useState<string>("MP4");
+  const [outputQuality, setOutputQuality] = useState<string>("High");
   const [previewOutputUrl, setPreviewOutputUrl] = useState<string | null>(null);
 
-  const [apiUrl, setApiUrl] = useState("http://localhost:8000");
-  const [configLoaded, setConfigLoaded] = useState(false);
+  // Estados de execução
+  const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  const sourceInputRef = useRef<HTMLInputElement>(null);
-  const targetInputRef = useRef<HTMLInputElement>(null);
+  // Drag & Drop
+  const [isDraggingSource, setIsDraggingSource] = useState<boolean>(false);
+  const [isDraggingTarget, setIsDraggingTarget] = useState<boolean>(false);
 
-  // Configurações do Sistema (Aba Configurações)
-  const [configTempPath, setConfigTempPath] = useState("");
-  const [configJobsPath, setConfigJobsPath] = useState("");
-  const [configLogLevel, setConfigLogLevel] = useState("info");
-  const [configThreadCount, setConfigThreadCount] = useState(4);
-  const [configMemoryStrategy, setConfigMemoryStrategy] = useState("balanced");
-  const [configProviders, setConfigProviders] = useState<string[]>([]);
-  const [availableProviders, setAvailableProviders] = useState<string[]>(["cpu"]);
-  const [isSavingConfig, setIsSavingConfig] = useState(false);
-
-  // Controle de reprodução da mídia de destino para processamento sob demanda
-  const [processFromCurrentPoint, setProcessFromCurrentPoint] = useState(false);
-  const [targetVideoTime, setTargetVideoTime] = useState(0);
-
-  // Processadores (Aba Criar Novo)
-  const [availableProcessors, setAvailableProcessors] = useState<string[]>(["face_swapper"]);
-  const [selectedProcessors, setSelectedProcessors] = useState<string[]>(["face_swapper"]);
-
-  // Filtros de Projetos (Aba Projetos)
-  const [projectFilter, setProjectFilter] = useState<"all" | "completed" | "processing" | "failed">("all");
+  // Modal de Exclusão
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
 
-  // Current active job (processing/queued) for progress display
-  const activeJob = jobs.find(j => j.status === "processing" || j.status === "queued");
+  // Configurações do Sistema
+  const [configTempPath, setConfigTempPath] = useState<string>(".temp");
+  const [configJobsPath, setConfigJobsPath] = useState<string>(".jobs");
+  const [configMemoryStrategy, setConfigMemoryStrategy] = useState<string>("balanced");
+  const [configThreadCount, setConfigThreadCount] = useState<number>(4);
+  const [configLogLevel, setConfigLogLevel] = useState<string>("info");
+  const [configProviders, setConfigProviders] = useState<string[]>([]);
+  const [isSavingConfig, setIsSavingConfig] = useState<boolean>(false);
 
-  // Efeitos e Handlers do Player / Comparador
+  // Carregar configurações do backend
   useEffect(() => {
-    if (isPlaying) {
-      originalVideoRef.current?.play().catch(() => {});
-      swappedVideoRef.current?.play().catch(() => {});
-    } else {
-      originalVideoRef.current?.pause();
-      swappedVideoRef.current?.pause();
-    }
-  }, [isPlaying]);
-
-  useEffect(() => {
-    if (originalVideoRef.current) originalVideoRef.current.muted = isMuted;
-    if (swappedVideoRef.current) swappedVideoRef.current.muted = isMuted;
-  }, [isMuted]);
-
-  useEffect(() => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setVideoDuration(0);
-  }, [previewOutputUrl]);
-
-  const handleSeek = (time: number) => {
-    setCurrentTime(time);
-    if (originalVideoRef.current) originalVideoRef.current.currentTime = time;
-    if (swappedVideoRef.current) swappedVideoRef.current.currentTime = time;
-  };
-
-  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = e.currentTarget;
-    setCurrentTime(video.currentTime);
-    
-    // Sincronizar o outro vídeo se estiver muito defasado
-    const otherVideo = video === swappedVideoRef.current ? originalVideoRef.current : swappedVideoRef.current;
-    if (otherVideo && Math.abs(otherVideo.currentTime - video.currentTime) > 0.15) {
-      otherVideo.currentTime = video.currentTime;
-    }
-  };
-
-  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    setVideoDuration(e.currentTarget.duration);
-  };
-
-  const handleFullscreen = () => {
-    if (videoContainerRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      } else {
-        videoContainerRef.current.requestFullscreen().catch(() => {});
-      }
-    }
-  };
-
-  // Carregar configuração de API dinâmica ao iniciar
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const res = await fetch("/config.json");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.apiUrl) {
-            setApiUrl(data.apiUrl);
-          }
-        }
-      } catch (e) {
-        console.warn("Falha ao carregar porta dinâmica, usando padrão 8000:", e);
-      } finally {
-        setConfigLoaded(true);
-      }
-    };
-    loadConfig();
-  }, []);
-
-  // Buscar informações do hardware ao montar
-  useEffect(() => {
-    if (!configLoaded) return;
-    const fetchHardware = async () => {
-      try {
-        const res = await fetch(`${apiUrl}/api/hardware/devices`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            const device = data[0];
-            let tempStr = "N/A";
-            if (device.temperature) {
-              if (typeof device.temperature === "object") {
-                const gpuTemp = device.temperature.gpu?.value;
-                if (gpuTemp !== undefined) {
-                  tempStr = `${gpuTemp}°C`;
-                }
-              } else {
-                tempStr = `${device.temperature}°C`;
-              }
-            }
-            setHardwareInfo(`GPU: ${device.name || "NVIDIA"} | Uso: ${device.load || 0}% | Temp: ${tempStr}`);
-          } else {
-            const resProv = await fetch(`${apiUrl}/api/hardware/providers`);
-            if (resProv.ok) {
-              const providers = await resProv.json();
-              setHardwareInfo(`Hardware: ${providers.join(", ")}`);
-            }
-          }
-        }
-      } catch (e) {
-        setHardwareInfo("Hardware: CPU (sem aceleração)");
-      }
-    };
-    fetchHardware();
-  }, [configLoaded, apiUrl]);
-
-  // Buscar configurações ao montar
-  useEffect(() => {
-    if (!configLoaded) return;
+    if (!apiUrl && apiUrl !== "") return;
     const fetchConfig = async () => {
       try {
-        const res = await fetch(`${apiUrl}/api/config`);
+        const url = formatApiUrl(apiUrl, "/api/config");
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          setConfigTempPath(data.temp_path || "");
-          setConfigJobsPath(data.jobs_path || "");
-          setConfigLogLevel(data.log_level || "info");
-          setConfigThreadCount(data.execution_thread_count || 4);
-          setConfigMemoryStrategy(data.video_memory_strategy || "balanced");
-          setConfigProviders(data.execution_providers || ["cpu"]);
+          if (data.temp_path) setConfigTempPath(data.temp_path);
+          if (data.jobs_path) setConfigJobsPath(data.jobs_path);
+          if (data.video_memory_strategy) setConfigMemoryStrategy(data.video_memory_strategy);
+          if (data.execution_thread_count) setConfigThreadCount(data.execution_thread_count);
+          if (data.log_level) setConfigLogLevel(data.log_level);
+          if (data.execution_providers) setConfigProviders(data.execution_providers);
         }
-      } catch (err) {
-        console.error("Erro ao buscar configurações:", err);
-      }
-
-      try {
-        const resProv = await fetch(`${apiUrl}/api/hardware/providers`);
-        if (resProv.ok) {
-          const providers = await resProv.json();
-          if (providers && providers.length > 0) {
-            setAvailableProviders(providers);
-          }
-        }
-      } catch (err) {
-        console.error("Erro ao buscar provedores disponíveis:", err);
+      } catch {
+        // use defaults
       }
     };
     fetchConfig();
-  }, [activeTab, configLoaded, apiUrl]);
+  }, [apiUrl]);
 
-  // Buscar processadores disponíveis
-  useEffect(() => {
-    if (!configLoaded) return;
-    const fetchProcessors = async () => {
-      try {
-        const res = await fetch(`${apiUrl}/api/processors/list`);
-        if (res.ok) {
-          const data = await res.json();
-          setAvailableProcessors(data);
-        }
-      } catch (e) {
-        console.error("Erro ao buscar processadores:", e);
-      }
-    };
-    fetchProcessors();
-  }, [configLoaded, apiUrl]);
-
-  // Buscar e atualizar lista de Jobs periodicamente
-  const fetchJobs = async () => {
-    if (!configLoaded) return;
-    try {
-      const res = await fetch(`${apiUrl}/api/jobs`);
-      if (res.ok) {
-        const data = await res.json();
-        const mappedJobs = data.map((job: any) => ({
-          id: job.id,
-          type: "Face Swap",
-          status: job.status,
-          progress: job.progress,
-          time: new Date(job.date_created).toLocaleString(),
-          source: job.source ? apiUrl + job.source : undefined,
-          target: job.target ? apiUrl + job.target : undefined,
-          outputUrl: job.output ? apiUrl + job.output : undefined,
-          error_message: job.error_message,
-          step: job.step
-        }));
-        setJobs(mappedJobs);
-        
-        const isAnyProcessing = mappedJobs.some((j: any) => j.status === "processing" || j.status === "queued");
-        setIsGenerating(isAnyProcessing);
-      }
-    } catch (err) {
-      console.error("Erro ao buscar jobs:", err);
-    }
-  };
-
-  useEffect(() => {
-    if (!configLoaded) return;
-    fetchJobs();
-    const interval = setInterval(fetchJobs, 2000);
-    return () => clearInterval(interval);
-  }, [configLoaded, apiUrl]);
-
-  // Pegar o último job completo para exibição no preview
-  const prevCompletedCount = useRef(0);
-  useEffect(() => {
-    const completedJobs = jobs.filter(j => j.status === "completed" && j.outputUrl);
-    if (completedJobs.length > 0) {
-      if (completedJobs.length > prevCompletedCount.current) {
-        setPreviewOutputUrl(completedJobs[0].outputUrl || null);
-        if (prevCompletedCount.current > 0) {
-          showToast("success", "Processamento Concluído!", `${completedJobs[0].id} finalizado com sucesso.`);
-        }
-      }
-    }
-    prevCompletedCount.current = completedJobs.length;
-  }, [jobs, showToast]);
-
-  // Detect failed jobs
-  const prevFailedCount = useRef(0);
-  useEffect(() => {
-    const failedJobs = jobs.filter(j => j.status === "failed");
-    if (failedJobs.length > prevFailedCount.current && prevFailedCount.current >= 0 && prevCompletedCount.current > 0) {
-      const latestFail = failedJobs[0];
-      showToast("error", "Processamento Falhou", latestFail?.error_message || `Job ${latestFail?.id} falhou.`);
-    }
-    prevFailedCount.current = failedJobs.length;
-  }, [jobs, showToast]);
-
-  // Lógica do Slider Deslizante (Comparação)
-  const handleSliderMove = (clientX: number) => {
-    if (!sliderContainerRef.current) return;
-    const rect = sliderContainerRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    setSliderPosition(percentage);
-  };
-
-  const handleTouchMove = (e: TouchEvent) => {
-    if (!isSliding) return;
-    handleSliderMove(e.touches[0].clientX);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isSliding) return;
-    handleSliderMove(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    setIsSliding(false);
-  };
-
-  useEffect(() => {
-    if (isSliding) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-      window.addEventListener("touchmove", handleTouchMove);
-      window.addEventListener("touchend", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleMouseUp);
-    };
-  }, [isSliding]);
-
-  // Carregar presets customizados do localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("facefusion_presets");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const customs = parsed.filter(p => p.isCustom);
-          setPresets([...BUILT_IN_PRESETS, ...customs]);
-        }
-      }
-    } catch (e) {
-      console.error("Erro ao carregar presets:", e);
-    }
-  }, []);
-
-  const handleApplyPreset = (presetName: string) => {
-    const selected = presets.find(p => p.name === presetName);
-    if (!selected) return;
-    setSelectedPresetName(presetName);
-    setFaceSwapperWeight(selected.faceSwapperWeight);
-    setFaceMaskBlur(selected.faceMaskBlur);
-    setDetectionThreshold(selected.detectionThreshold);
-    setSmoothing(selected.smoothing);
-    setFaceSwapperModel(selected.faceSwapperModel);
-    setFaceSwapperPixelBoost(selected.faceSwapperPixelBoost);
-
-    if (selected.faceEnhancerModel) setFaceEnhancerModel(selected.faceEnhancerModel);
-    if (selected.faceEnhancerBlend !== undefined) setFaceEnhancerBlend(selected.faceEnhancerBlend);
-    if (selected.faceEnhancerWeight !== undefined) setFaceEnhancerWeight(selected.faceEnhancerWeight);
-    if (selected.frameEnhancerModel) setFrameEnhancerModel(selected.frameEnhancerModel);
-    if (selected.frameEnhancerBlend !== undefined) setFrameEnhancerBlend(selected.frameEnhancerBlend);
-
-    showToast("success", "Preset Aplicado", `Configuração "${presetName}" carregada.`);
-  };
-
-  const handleSavePreset = () => {
-    if (!newPresetName.trim()) {
-      showToast("warning", "Nome Inválido", "Digite um nome para o preset.");
-      return;
-    }
-    if (presets.some(p => p.name.toLowerCase() === newPresetName.trim().toLowerCase())) {
-      showToast("warning", "Preset Já Existe", "Escolha outro nome para a configuração.");
-      return;
-    }
-
-    const newPreset: Preset = {
-      name: newPresetName.trim(),
-      faceSwapperWeight,
-      faceMaskBlur,
-      detectionThreshold,
-      smoothing,
-      faceSwapperModel,
-      faceSwapperPixelBoost,
-      faceEnhancerModel,
-      faceEnhancerBlend,
-      faceEnhancerWeight,
-      frameEnhancerModel,
-      frameEnhancerBlend,
-      isCustom: true
-    };
-
-    const updatedPresets = [...presets, newPreset];
-    setPresets(updatedPresets);
-    setSelectedPresetName(newPreset.name);
-    setNewPresetName("");
-
-    const customsOnly = updatedPresets.filter(p => p.isCustom);
-    localStorage.setItem("facefusion_presets", JSON.stringify(customsOnly));
-    showToast("success", "Preset Salvo", `A configuração "${newPreset.name}" foi salva com sucesso.`);
-  };
-
-  const updateContainerDimensions = () => {
+  // Atualizar dimensões do container de destino para cálculo das caixas faciais
+  const updateContainerDimensions = useCallback(() => {
     if (targetContainerRef.current) {
       setContainerDimensions({
         width: targetContainerRef.current.clientWidth,
-        height: targetContainerRef.current.clientHeight
+        height: targetContainerRef.current.clientHeight,
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     updateContainerDimensions();
     window.addEventListener("resize", updateContainerDimensions);
     return () => window.removeEventListener("resize", updateContainerDimensions);
-  }, [detectedTargetFaces, targetVideo]);
+  }, [detectedTargetFaces, targetMedia, updateContainerDimensions]);
 
-  const getScaledBox = (bbox: number[]) => {
+  const getScaledBox = useCallback((bbox: number[]) => {
     if (!targetDimensions || !containerDimensions) return null;
     const [x_min, y_min, x_max, y_max] = bbox;
     const Mw = targetDimensions.width;
     const Mh = targetDimensions.height;
     const Cw = containerDimensions.width;
     const Ch = containerDimensions.height;
-
     if (!Mw || !Mh || !Cw || !Ch) return null;
 
     const Rm = Mw / Mh;
     const Rc = Cw / Ch;
-
     let Rw = Cw;
     let Rh = Ch;
     let Ro = 0;
@@ -677,19 +222,20 @@ export default function Home() {
       To = (Ch - Rh) / 2;
     }
 
-    const left = Ro + (x_min / Mw) * Rw;
-    const top = To + (y_min / Mh) * Rh;
-    const width = ((x_max - x_min) / Mw) * Rw;
-    const height = ((y_max - y_min) / Mh) * Rh;
+    return {
+      left: Ro + (x_min / Mw) * Rw,
+      top: To + (y_min / Mh) * Rh,
+      width: ((x_max - x_min) / Mw) * Rw,
+      height: ((y_max - y_min) / Mh) * Rh,
+    };
+  }, [targetDimensions, containerDimensions]);
 
-    return { left, top, width, height };
-  };
-
-  // Enviar arquivo para a API
+  // Upload file helper
   const uploadFile = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch(`${apiUrl}/api/media/upload`, {
+    const url = formatApiUrl(apiUrl, "/api/media/upload");
+    const res = await fetch(url, {
       method: "POST",
       body: formData,
     });
@@ -700,18 +246,24 @@ export default function Home() {
   };
 
   const handleSourceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const data = await uploadFile(file);
-      const newSource = { url: apiUrl + data.url, file_path: data.file_path, filename: data.filename };
-      setSourceItems(prev => [...prev, newSource]);
-      setSourceImage(apiUrl + data.url);
-      setSourceImageFullPath(data.file_path);
-      setSourceImageName(data.filename);
-      showToast("success", "Imagem de Origem Carregada", file.name);
-    } catch (err) {
-      showToast("error", "Erro no Upload", "Falha ao enviar a imagem de origem.");
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const data = await uploadFile(file);
+        const resolvedUrl = formatApiUrl(apiUrl, data.url);
+        const newSource: SourceItem = {
+          url: resolvedUrl,
+          file_path: data.file_path,
+          filename: data.filename,
+        };
+        setSourceItems(prev => [...prev, newSource]);
+        setSourceImageFullPath(data.file_path);
+        showToast("success", "Imagem Carregada", file.name);
+      } catch {
+        showToast("error", "Erro no Upload", `Falha ao enviar ${file.name}`);
+      }
     }
   };
 
@@ -720,135 +272,159 @@ export default function Home() {
     if (!file) return;
     try {
       const data = await uploadFile(file);
-      setTargetVideo(apiUrl + data.url);
-      setTargetVideoFullPath(data.file_path);
-      setTargetVideoName(data.filename);
+      const resolvedUrl = formatApiUrl(apiUrl, data.url);
+      setTargetMedia(resolvedUrl);
+      setTargetMediaFullPath(data.file_path);
+      setTargetMediaName(data.filename);
+      setDetectedTargetFaces([]);
+      setFaceMappings({});
       showToast("success", "Mídia de Destino Carregada", file.name);
-    } catch (err) {
-      showToast("error", "Erro no Upload", "Falha ao enviar a mídia de destino.");
+    } catch {
+      showToast("error", "Erro no Upload", "Falha ao enviar mídia de destino.");
     }
   };
 
-  /* ===== Drag & Drop Handlers ===== */
-  const handleDrop = async (e: React.DragEvent, type: "source" | "target") => {
+  // Drag & drop handlers
+  const handleDropSource = async (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (type === "source") setIsDraggingSource(false);
-    else setIsDraggingTarget(false);
+    setIsDraggingSource(false);
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const data = await uploadFile(files[i]);
+        const resolvedUrl = formatApiUrl(apiUrl, data.url);
+        setSourceItems(prev => [...prev, { url: resolvedUrl, file_path: data.file_path, filename: data.filename }]);
+        setSourceImageFullPath(data.file_path);
+        showToast("success", "Imagem Carregada", files[i].name);
+      } catch {
+        showToast("error", "Erro no Upload", "Falha no envio.");
+      }
+    }
+  };
 
+  const handleDropTarget = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingTarget(false);
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
-
     try {
       const data = await uploadFile(file);
-      if (type === "source") {
-        const newSource = { url: apiUrl + data.url, file_path: data.file_path, filename: data.filename };
-        setSourceItems(prev => [...prev, newSource]);
-        setSourceImage(apiUrl + data.url);
-        setSourceImageFullPath(data.file_path);
-        setSourceImageName(data.filename);
-        showToast("success", "Imagem de Origem Carregada", file.name);
-      } else {
-        setTargetVideo(apiUrl + data.url);
-        setTargetVideoFullPath(data.file_path);
-        setTargetVideoName(data.filename);
-        showToast("success", "Mídia de Destino Carregada", file.name);
-      }
-    } catch (err) {
-      showToast("error", "Erro no Upload", `Falha ao enviar ${file.name}.`);
+      const resolvedUrl = formatApiUrl(apiUrl, data.url);
+      setTargetMedia(resolvedUrl);
+      setTargetMediaFullPath(data.file_path);
+      setTargetMediaName(data.filename);
+      setDetectedTargetFaces([]);
+      setFaceMappings({});
+      showToast("success", "Mídia de Destino Carregada", file.name);
+    } catch {
+      showToast("error", "Erro no Upload", "Falha no envio.");
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+  // Analisar rostos
+  const handleAnalyzeFaces = async () => {
+    if (!targetMediaFullPath) return;
+    setIsAnalyzingTargetFaces(true);
+    setDetectedTargetFaces([]);
+    setFaceMappings({});
 
-  const handleDragEnter = (e: React.DragEvent, type: "source" | "target") => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (type === "source") setIsDraggingSource(true);
-    else setIsDraggingTarget(true);
-  };
+    const isVideoFile = !!targetMediaName.match(/\.(mp4|webm|mkv|avi|mov)$/i);
+    const timestamp = isVideoFile ? targetVideoTime : null;
+    const frameNumber = isVideoFile ? Math.round(targetVideoTime * 30) : 0;
+    setReferenceFrameNumber(frameNumber);
 
-  const handleDragLeave = (e: React.DragEvent, type: "source" | "target") => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (type === "source") setIsDraggingSource(false);
-    else setIsDraggingTarget(false);
-  };
-
-  // Gerar preview instantâneo (um frame)
-  const handleGeneratePreview = async (timestamp: number = 0, silent: boolean = false) => {
-    if (isGenerating) return;
-    if (!sourceImageFullPath || !targetVideoFullPath) {
-      if (!silent) {
-        showToast("warning", "Mídia Incompleta", "Envie a imagem de origem e a mídia de destino antes de gerar o preview.");
+    try {
+      const url = formatApiUrl(apiUrl, "/api/media/analyze-faces");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_path: targetMediaFullPath,
+          timestamp,
+          frame_number: frameNumber,
+        }),
+      });
+      if (!res.ok) throw new Error("Erro na detecção de rostos.");
+      const data = await res.json();
+      setDetectedTargetFaces(data.faces || []);
+      if ((data.faces || []).length === 0) {
+        showToast("info", "Nenhum Rosto", "Nenhum rosto foi encontrado neste frame.");
+      } else {
+        showToast("success", "Rostos Detectados", `${data.faces.length} rostos prontos para mapeamento.`);
       }
+    } catch {
+      showToast("error", "Erro na Análise", "Não foi possível analisar rostos na mídia.");
+    } finally {
+      setIsAnalyzingTargetFaces(false);
+    }
+  };
+
+  // Gerar Preview
+  const handleGeneratePreview = async (silent = false) => {
+    if (!sourceImageFullPath || !targetMediaFullPath) {
+      if (!silent) showToast("warning", "Mídia Incompleta", "Selecione origem e destino antes do preview.");
       return;
     }
     setIsPreviewLoading(true);
-    if (!silent) {
-      showToast("info", "Gerando Preview...", "Aplicando processadores ao frame. Aguarde.");
-    }
+
+    const isVideoFile = !!targetMediaName.match(/\.(mp4|webm|mkv|avi|mov)$/i);
+    const timestamp = isVideoFile ? targetVideoTime : null;
+    const frameNumber = isVideoFile ? Math.round(targetVideoTime * 30) : 0;
 
     try {
-      const res = await fetch(`${apiUrl}/api/preview`, {
+      const url = formatApiUrl(apiUrl, "/api/preview");
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           source_paths: [sourceImageFullPath],
-          target_path: targetVideoFullPath,
+          target_path: targetMediaFullPath,
+          timestamp,
+          frame_number: frameNumber,
           processors: selectedProcessors,
-          timestamp: timestamp,
+          face_swapper_model: faceSwapperModel,
+          face_swapper_pixel_boost: faceSwapperPixelBoost,
           face_swapper_weight: faceSwapperWeight,
           face_mask_blur: faceMaskBlur / 50.0,
           detection_threshold: detectionThreshold,
-          face_swapper_model: faceSwapperModel,
-          face_swapper_pixel_boost: faceSwapperPixelBoost,
           face_enhancer_model: faceEnhancerModel,
           face_enhancer_blend: faceEnhancerBlend,
           face_enhancer_weight: faceEnhancerWeight,
           frame_enhancer_model: frameEnhancerModel,
-          frame_enhancer_blend: frameEnhancerBlend
-        })
+          frame_enhancer_blend: frameEnhancerBlend,
+          face_editor_model: faceEditorModel,
+          face_editor_mouth_smile: faceEditorSmile,
+          age_modifier_model: ageModifierModel,
+          age_modifier_direction: ageModifierDirection,
+          expression_restorer_factor: expressionRestorerFactor,
+        }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ detail: "Erro desconhecido" }));
-        throw new Error(errData.detail || "Erro ao gerar preview.");
-      }
-
+      if (!res.ok) throw new Error("Falha ao gerar preview.");
       const data = await res.json();
       if (data.preview_url) {
-        setPreviewOutputUrl(apiUrl + data.preview_url);
-        if (!silent) {
-          showToast("success", "Preview Gerado!", "O resultado está visível no painel de visualização.");
-        }
+        setPreviewOutputUrl(formatApiUrl(apiUrl, data.preview_url));
+        if (!silent) showToast("success", "Preview Atualizado", "Novo frame processado.");
       }
     } catch (err: any) {
-      if (!silent) {
-        showToast("error", "Erro no Preview", err.message || "Não foi possível gerar o preview.");
-      }
+      if (!silent) showToast("error", "Erro no Preview", err.message || "Falha na pré-visualização.");
     } finally {
       setIsPreviewLoading(false);
     }
   };
 
-  // Efeito para gerar preview automático com debounce ao alterar configurações/tempo do vídeo
+  // Preview automático ao trocar opções (debounce)
   useEffect(() => {
-    if (!autoPreview || !sourceImageFullPath || !targetVideoFullPath || isPlaying || isGenerating) return;
-
+    if (!autoPreview || !sourceImageFullPath || !targetMediaFullPath || isGenerating) return;
     const timer = setTimeout(() => {
-      const activeTime = targetVideoTime > 0 ? targetVideoTime : currentTime;
-      handleGeneratePreview(activeTime, true);
-    }, 450);
-
+      handleGeneratePreview(true);
+    }, 500);
     return () => clearTimeout(timer);
   }, [
     autoPreview,
     sourceImageFullPath,
-    targetVideoFullPath,
+    targetMediaFullPath,
     selectedProcessors,
     faceSwapperWeight,
     faceMaskBlur,
@@ -857,86 +433,41 @@ export default function Home() {
     faceSwapperPixelBoost,
     faceEnhancerModel,
     faceEnhancerBlend,
-    faceEnhancerWeight,
     frameEnhancerModel,
     frameEnhancerBlend,
-    currentTime,
+    faceEditorSmile,
+    ageModifierDirection,
     targetVideoTime,
-    isPlaying,
-    isGenerating
   ]);
 
-  // Analisar rostos no frame atual da mídia de destino
-  const analyzeTargetFaces = async () => {
-    if (!targetVideoFullPath) return;
-    setIsAnalyzingTargetFaces(true);
-    setDetectedTargetFaces([]);
-    setFaceMappings({});
-
-    const isVideoFile = !!targetVideoName.match(/\.(mp4|webm|mkv|avi|mov)$/i);
-    const timestamp = isVideoFile ? targetVideoTime : null;
-    const frameNumber = isVideoFile ? Math.round(targetVideoTime * 30) : 0;
-    setReferenceFrameNumber(frameNumber);
-
-    try {
-      const res = await fetch(`${apiUrl}/api/media/analyze-faces`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_path: targetVideoFullPath,
-          timestamp: timestamp,
-          frame_number: frameNumber
-        })
-      });
-
-      if (!res.ok) {
-        throw new Error("Erro ao analisar rostos");
-      }
-
-      const data = await res.json();
-      setDetectedTargetFaces(data.faces || []);
-      if ((data.faces || []).length === 0) {
-        showToast("info", "Nenhum Rosto Detectado", "Nenhum rosto foi encontrado neste frame.");
-      } else {
-        showToast("success", "Rostos Detectados", `${data.faces.length} rostos encontrados para mapeamento.`);
-      }
-    } catch (err) {
-      showToast("error", "Erro de Análise", "Não foi possível analisar os rostos na mídia de destino.");
-    } finally {
-      setIsAnalyzingTargetFaces(false);
-    }
-  };
-
-  // Iniciar processamento
+  // Iniciar Tarefa Completa (Job)
   const handleGenerateSwap = async () => {
     if (isGenerating) return;
-    if (!sourceImageFullPath || !targetVideoFullPath) {
-      showToast("warning", "Mídia Incompleta", "Envie a imagem de origem e a mídia de destino antes de iniciar.");
+    if (!sourceImageFullPath || !targetMediaFullPath) {
+      showToast("warning", "Mídia Incompleta", "Envie a origem e o destino antes de iniciar.");
       return;
     }
     setIsGenerating(true);
-    
-    // Calcular frame de início (estimando 30 FPS se for vídeo)
-    const trimFrameStart = processFromCurrentPoint ? Math.round(targetVideoTime * 30) : null;
 
-    // Estruturar mappings se existirem mapeamentos definidos
+    const trimFrameStart = processFromCurrentPoint ? Math.round(targetVideoTime * 30) : null;
     const mappings = Object.entries(faceMappings).map(([targetIdx, srcPath]) => ({
       source_path: srcPath,
       target_face_index: parseInt(targetIdx, 10),
-      reference_frame_number: referenceFrameNumber
+      reference_frame_number: referenceFrameNumber,
     }));
 
-    const sourcePaths = mappings.length > 0 
+    const sourcePaths = mappings.length > 0
       ? Array.from(new Set(mappings.map(m => m.source_path)))
       : [sourceImageFullPath];
 
     try {
-      const res = await fetch(`${apiUrl}/api/jobs`, {
+      const url = formatApiUrl(apiUrl, "/api/jobs");
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           source_paths: sourcePaths,
-          target_path: targetVideoFullPath,
+          target_path: targetMediaFullPath,
           face_swapper_weight: faceSwapperWeight,
           face_mask_blur: faceMaskBlur / 50.0,
           detection_threshold: detectionThreshold,
@@ -951,52 +482,25 @@ export default function Home() {
           face_enhancer_weight: faceEnhancerWeight,
           frame_enhancer_model: frameEnhancerModel,
           frame_enhancer_blend: frameEnhancerBlend,
-          mappings: mappings.length > 0 ? mappings : null
-        })
+          face_editor_model: faceEditorModel,
+          face_editor_mouth_smile: faceEditorSmile,
+          age_modifier_model: ageModifierModel,
+          age_modifier_direction: ageModifierDirection,
+          expression_restorer_factor: expressionRestorerFactor,
+          mappings: mappings.length > 0 ? mappings : undefined,
+        }),
       });
-      if (!res.ok) {
-        throw new Error("Erro ao enviar a tarefa para o servidor.");
-      }
+
+      if (!res.ok) throw new Error("Falha ao submeter job.");
       const data = await res.json();
-      console.log("Job enviado com sucesso:", data);
-      setPreviewOutputUrl(null); // Resetar preview até o novo job terminar
-      setActiveTab("create_new"); // Sincroniza redirecionamento
-      showToast("info", "Processamento Iniciado", `Tarefa ${data.job_id} foi adicionada à fila.`);
-      fetchJobs();
-    } catch (err) {
-      showToast("error", "Falha ao Iniciar", "Não foi possível enviar a tarefa para processamento.");
+      showToast("success", "Tarefa Criada", `ID: ${data.job_id} na fila de execução.`);
+      await fetchJobs();
+      setActiveTab("projects");
+    } catch (err: any) {
+      showToast("error", "Erro ao Criar Tarefa", err.message || "Falha na conexão.");
+    } finally {
       setIsGenerating(false);
     }
-  };
-
-  // Excluir Job
-  const handleDeleteJob = async () => {
-    if (!jobToDelete) return;
-    const jobId = jobToDelete;
-    setJobToDelete(null);
-    try {
-      const res = await fetch(`${apiUrl}/api/jobs/${jobId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setJobs(prev => prev.filter(j => j.id !== jobId));
-        showToast("success", "Tarefa Excluída", `${jobId} removido com sucesso.`);
-      } else {
-        const data = await res.json();
-        showToast("error", "Erro ao Excluir", data.detail || "Erro desconhecido.");
-      }
-    } catch (err) {
-      showToast("error", "Erro de Conexão", "Falha ao comunicar com o servidor.");
-    }
-  };
-
-  // Carregar Job Concluído no Comparador do Dashboard
-  const handleLoadToComparator = (job: Job) => {
-    if (!job.target || !job.outputUrl) return;
-    setTargetVideo(job.target);
-    setPreviewOutputUrl(job.outputUrl);
-    setActiveTab("create_new");
-    showToast("info", "Projeto Carregado", `${job.id} foi aberto no comparador.`);
   };
 
   // Salvar Configurações
@@ -1004,54 +508,41 @@ export default function Home() {
     e.preventDefault();
     setIsSavingConfig(true);
     try {
-      const res = await fetch(`${apiUrl}/api/config`, {
+      const url = formatApiUrl(apiUrl, "/api/config");
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          temp_path: configTempPath || null,
-          jobs_path: configJobsPath || null,
+          temp_path: configTempPath,
+          jobs_path: configJobsPath,
+          video_memory_strategy: configMemoryStrategy,
+          execution_thread_count: configThreadCount,
           log_level: configLogLevel,
           execution_providers: configProviders,
-          execution_thread_count: configThreadCount,
-          video_memory_strategy: configMemoryStrategy
-        })
+        }),
       });
-      if (res.ok) {
-        showToast("success", "Configurações Salvas", "As alterações foram aplicadas com sucesso.");
-      } else {
-        const data = await res.json();
-        showToast("error", "Erro ao Salvar", data.detail || "Erro desconhecido.");
-      }
-    } catch (err) {
-      showToast("error", "Erro de Conexão", "Não foi possível salvar as configurações.");
+      if (!res.ok) throw new Error("Erro ao salvar.");
+      showToast("success", "Configurações Salvas", "Novos parâmetros registrados.");
+    } catch {
+      showToast("error", "Erro", "Não foi possível persistir as configurações.");
     } finally {
       setIsSavingConfig(false);
     }
   };
 
-  const handleExportDiagnostic = async () => {
-    try {
-      showToast("info", "Exportando Diagnóstico", "Gerando pacote de diagnóstico...");
-      const res = await fetch(`${apiUrl}/api/diagnostic/export`);
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "facefusion_diagnostic.zip";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        showToast("success", "Diagnóstico Exportado", "Arquivo ZIP baixado com sucesso.");
-      } else {
-        showToast("error", "Erro na Exportação", "Falha ao gerar pacote de diagnóstico.");
-      }
-    } catch (err) {
-      showToast("error", "Erro de Conexão", "Não foi possível exportar o diagnóstico.");
-    }
+  // Exportar Diagnóstico
+  const handleExportDiagnostic = () => {
+    const url = formatApiUrl(apiUrl, "/api/diagnostic/export");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "facefusion_diagnostic.zip";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast("info", "Diagnóstico", "Download do pacote de logs iniciado.");
   };
 
+  // Download do Resultado
   const handleDownloadOutput = () => {
     if (!previewOutputUrl) return;
     const a = document.createElement("a");
@@ -1060,116 +551,108 @@ export default function Home() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    showToast("info", "Download Iniciado", "Arquivo de saída sendo baixado.");
+    showToast("info", "Download", "Arquivo sendo transferido.");
   };
 
-  // Toggle Processadores Selecionados
+  // Toggle Processor Selection
   const toggleProcessor = (proc: string) => {
     setSelectedProcessors(prev =>
       prev.includes(proc) ? prev.filter(p => p !== proc) : [...prev, proc]
     );
   };
 
-  // Filtragem dos Jobs para a aba Projetos
-  const filteredJobs = jobs.filter(job => {
-    if (projectFilter === "all") return true;
-    if (projectFilter === "completed") return job.status === "completed";
-    if (projectFilter === "failed") return job.status === "failed";
-    if (projectFilter === "processing") return job.status === "processing" || job.status === "queued";
-    return true;
-  });
+  // Presets Handlers
+  const handleApplyPreset = (name: string) => {
+    const preset = presets.find(p => p.name === name);
+    if (!preset) return;
+    setSelectedPresetName(name);
+    setFaceSwapperWeight(preset.faceSwapperWeight);
+    setFaceMaskBlur(preset.faceMaskBlur);
+    setDetectionThreshold(preset.detectionThreshold);
+    setSmoothing(preset.smoothing);
+    setFaceSwapperModel(preset.faceSwapperModel);
+    setFaceSwapperPixelBoost(preset.faceSwapperPixelBoost);
+    if (preset.faceEnhancerModel) setFaceEnhancerModel(preset.faceEnhancerModel);
+    if (preset.faceEnhancerBlend !== undefined) setFaceEnhancerBlend(preset.faceEnhancerBlend);
+    if (preset.frameEnhancerModel) setFrameEnhancerModel(preset.frameEnhancerModel);
+    if (preset.frameEnhancerBlend !== undefined) setFrameEnhancerBlend(preset.frameEnhancerBlend);
+    showToast("success", "Preset Aplicado", preset.name);
+  };
+
+  const handleSaveCurrentPreset = () => {
+    const success = saveCustomPreset(
+      {
+        faceSwapperWeight,
+        faceMaskBlur,
+        detectionThreshold,
+        smoothing,
+        faceSwapperModel,
+        faceSwapperPixelBoost,
+        faceEnhancerModel,
+        faceEnhancerBlend,
+        faceEnhancerWeight,
+        frameEnhancerModel,
+        frameEnhancerBlend,
+      },
+      newPresetName
+    );
+    if (success) {
+      showToast("success", "Preset Salvo", newPresetName);
+    } else {
+      showToast("warning", "Nome Inválido", "Informe um nome válido para o preset.");
+    }
+  };
+
+  // Carregar job para o comparador
+  const handleLoadToComparator = (job: Job) => {
+    if (job.outputUrl) {
+      setPreviewOutputUrl(formatApiUrl(apiUrl, job.outputUrl));
+      setActiveTab("create_new");
+      showToast("info", "Job Carregado", `Visualizando resultado de ${job.id}`);
+    }
+  };
+
+  // Confirmar exclusão de job
+  const handleDeleteJobConfirmed = async () => {
+    if (!jobToDelete) return;
+    const res = await deleteJob(jobToDelete);
+    if (res.success) {
+      showToast("success", "Job Excluído", `Tarefa ${jobToDelete} removida.`);
+    } else {
+      showToast("error", "Erro ao Excluir", res.message);
+    }
+    setJobToDelete(null);
+  };
+
+  const queuedCount = jobs.filter(j => j.status === "processing" || j.status === "queued").length;
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-[#ededed] font-sans overflow-hidden">
-      
-      {/* Toast Notification Container */}
+      {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* 1. Sidebar Translúcido (Glassmorphism) */}
-      <aside className="w-64 bg-zinc-950/40 backdrop-blur-xl border-r border-zinc-900 flex flex-col justify-between p-6">
-        <div>
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-10 px-2">
-            <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/30 animate-pulse-glow">
-              <span className="font-extrabold text-white text-lg">F</span>
-            </div>
-            <h1 className="font-bold text-xl tracking-tight text-white">
-              Face<span className="text-red-500">Fusion</span>
-            </h1>
-          </div>
+      {/* Sidebar */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        queuedCount={queuedCount}
+      />
 
-          {/* Links de Navegação */}
-          <nav className="space-y-1">
-            <button
-              onClick={() => setActiveTab("create_new")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                activeTab === "create_new"
-                  ? "text-zinc-200 bg-zinc-900/50 border-l-2 border-red-500"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
-              }`}
-            >
-              <PlusCircle size={18} className={`transition-colors ${activeTab === "create_new" ? "text-red-500" : ""}`} />
-              Criar Novo
-            </button>
-            <button
-              onClick={() => setActiveTab("projects")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                activeTab === "projects"
-                  ? "text-zinc-200 bg-zinc-900/50 border-l-2 border-red-500"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
-              }`}
-            >
-              <FolderOpen size={18} className={`transition-colors ${activeTab === "projects" ? "text-red-500" : ""}`} />
-              Projetos
-            </button>
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                activeTab === "settings"
-                  ? "text-zinc-200 bg-zinc-900/50 border-l-2 border-red-500"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
-              }`}
-            >
-              <Settings size={18} className={`transition-colors ${activeTab === "settings" ? "text-red-500" : ""}`} />
-              Configurações
-            </button>
-          </nav>
-        </div>
-
-        {/* Footer Sidebar (User Info) */}
-        <div className="border-t border-zinc-900 pt-6 space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700">
-                <User size={18} className="text-zinc-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Yuri S.</p>
-                <p className="text-xs text-zinc-500">Administrador</p>
-              </div>
-            </div>
-            <button className="text-zinc-400 hover:text-red-500 transition-colors cursor-pointer">
-              <Bell size={18} />
-            </button>
-          </div>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg text-sm font-semibold transition-all cursor-pointer">
-            <LogOut size={18} />
-            Deslogar
-          </button>
-        </div>
-      </aside>
-
-      {/* 2. Main Content Area */}
+      {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        
+        {/* Header */}
+        <Header
+          title={activeTab === "create_new" ? "Estúdio de Criação" : activeTab === "projects" ? "Galeria de Projetos" : "Configurações"}
+          hardwareInfo={hardwareInfo}
+          isBackendConnected={isBackendConnected}
+          onRefreshHardware={fetchHardware}
+        />
 
         {/* Workspace Body */}
         <div className="flex-1 p-4 md:p-6 flex flex-col overflow-hidden">
-
-          {/* =          {/* ABA 1: CRIAR NOVO */}
+          {/* TAB 1: CRIAR NOVO */}
           {activeTab === "create_new" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-4 animate-fade-in">
-
               {/* Active Job Progress Bar */}
               {activeJob && (
                 <div className="flex items-center gap-3 bg-zinc-950/50 border border-zinc-900 rounded-xl px-4 py-2.5 flex-shrink-0 animate-fade-in">
@@ -1181,7 +664,7 @@ export default function Home() {
                     </div>
                     <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full transition-all duration-700 ease-out animate-shimmer"
+                        className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full transition-all duration-700 ease-out"
                         style={{ width: `${activeJob.progress}%` }}
                       />
                     </div>
@@ -1192,1252 +675,228 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Seção 2: Área de Mídia (Upload) e Controles */}
+              {/* Media Inputs & Controls Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 overflow-hidden">
-                
-                {/* Esquerda: Upload e Configuração */}
+                {/* Esquerda: Uploads & Configurações */}
                 <div className="space-y-4 flex flex-col overflow-hidden h-full">
-                  
-                  {/* Media Inputs Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-[1.1] min-h-[160px]">
-                    {/* Source Image */}
-                    <div className="bg-zinc-950/30 border border-zinc-900 rounded-xl p-4 flex flex-col justify-between h-full min-h-0 overflow-hidden">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Imagens de Origem (Source)</span>
-                        {sourceItems.length > 0 && (
-                          <span className="text-[10px] text-zinc-500 font-medium">
-                            {sourceItems.length} carregada(s)
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        ref={sourceInputRef}
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleSourceUpload}
-                      />
-                      {sourceItems.length > 0 ? (
-                        <div className="flex-1 w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 min-h-0 overflow-y-auto">
-                          <div className="grid grid-cols-3 gap-2">
-                            {sourceItems.map((item, index) => {
-                              const isSelected = item.file_path === sourceImageFullPath;
-                              return (
-                                <div
-                                  key={index}
-                                  onClick={() => {
-                                    setSourceImage(item.url);
-                                    setSourceImageFullPath(item.file_path);
-                                    setSourceImageName(item.filename);
-                                  }}
-                                  className={`relative aspect-square bg-zinc-950 border rounded-md overflow-hidden group cursor-pointer transition-all duration-200 ${
-                                    isSelected ? "border-red-500 ring-2 ring-red-500/20" : "border-zinc-800 hover:border-zinc-700"
-                                  }`}
-                                >
-                                  <img src={item.url} alt={item.filename} className="w-full h-full object-cover" />
-                                  {/* Indicador selecionado */}
-                                  {isSelected && (
-                                    <div className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5 z-10">
-                                      <Check size={8} className="stroke-[3]" />
-                                    </div>
-                                  )}
-                                  {/* Botão de Excluir */}
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const newItems = sourceItems.filter((_, idx) => idx !== index);
-                                      setSourceItems(newItems);
-                                      if (item.file_path === sourceImageFullPath) {
-                                        if (newItems.length > 0) {
-                                          setSourceImage(newItems[0].url);
-                                          setSourceImageFullPath(newItems[0].file_path);
-                                          setSourceImageName(newItems[0].filename);
-                                        } else {
-                                          setSourceImage(null);
-                                          setSourceImageFullPath(null);
-                                          setSourceImageName("");
-                                        }
-                                      }
-                                    }}
-                                    className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 hover:text-red-400 transition-all duration-150 z-20"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                            {/* Adicionar mais */}
-                            <button
-                              onClick={() => sourceInputRef.current?.click()}
-                              className="aspect-square bg-zinc-950/40 border border-dashed border-zinc-800 hover:border-red-500/40 hover:bg-red-500/5 rounded-md flex flex-col items-center justify-center transition-all duration-150 group cursor-pointer"
-                            >
-                              <Plus size={16} className="text-zinc-500 group-hover:text-red-500 transition-colors" />
-                              <span className="text-[8px] text-zinc-600 group-hover:text-red-500/80 font-bold uppercase tracking-wider mt-1">Add</span>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div 
-                          onClick={() => sourceInputRef.current?.click()}
-                          onDragOver={handleDragOver}
-                          onDragEnter={(e) => handleDragEnter(e, "source")}
-                          onDragLeave={(e) => handleDragLeave(e, "source")}
-                          onDrop={(e) => handleDrop(e, "source")}
-                          className={`border border-dashed rounded-lg flex-1 w-full flex flex-col items-center justify-center p-2 transition-all duration-200 group cursor-pointer text-center ${
-                            isDraggingSource 
-                              ? "drop-zone-active border-red-500/60" 
-                              : "border-zinc-800 hover:border-red-500/40 hover:bg-red-500/5"
-                          }`}
-                        >
-                          <Upload size={24} className={`mb-2 transition-all duration-200 ${isDraggingSource ? "text-red-500 scale-110" : "text-zinc-600 group-hover:text-red-500"}`} />
-                          <p className="text-xs text-zinc-400 font-semibold">{isDraggingSource ? "Solte a imagem aqui" : "Arraste a foto da face"}</p>
-                          <span className="text-[10px] text-zinc-500">ou clique para buscar</span>
-                        </div>
-                      )}
-                    </div>
+                    <SourceUploader
+                      sourceItems={sourceItems}
+                      sourceImageFullPath={sourceImageFullPath}
+                      onSelectSource={(item) => setSourceImageFullPath(item.file_path)}
+                      onRemoveSource={(idx) => {
+                        const next = sourceItems.filter((_, i) => i !== idx);
+                        setSourceItems(next);
+                        if (next.length > 0) setSourceImageFullPath(next[0].file_path);
+                        else setSourceImageFullPath(null);
+                      }}
+                      onUpload={handleSourceUpload}
+                      isDragging={isDraggingSource}
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingSource(true); }}
+                      onDragLeave={() => setIsDraggingSource(false)}
+                      onDrop={handleDropSource}
+                    />
 
-                    {/* Target Media */}
-                    <div className="bg-zinc-950/30 border border-zinc-900 rounded-xl p-4 flex flex-col justify-between h-full min-h-0 overflow-hidden">
-                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Mídia de Destino (Target)</span>
-                      <input
-                        type="file"
-                        ref={targetInputRef}
-                        accept="image/*,video/*"
-                        className="hidden"
-                        onChange={handleTargetUpload}
-                      />
-                      {targetVideo ? (
-                        <div className="relative flex-1 w-full bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden group min-h-0">
-                          {targetVideo.match(/\.(mp4|webm|mkv|avi|mov)$/i) ? (
-                            <div className="absolute inset-0 w-full h-full flex flex-col justify-between min-h-0">
-                              <div ref={targetContainerRef} className="relative w-full h-[75%] bg-black flex items-center justify-center min-h-0 overflow-hidden">
-                                <video 
-                                  src={targetVideo} 
-                                  className="object-contain w-full h-full min-h-0" 
-                                  controls 
-                                  onTimeUpdate={(e) => setTargetVideoTime(e.currentTarget.currentTime)}
-                                  onLoadedMetadata={(e) => {
-                                    setTargetDimensions({
-                                      width: e.currentTarget.videoWidth,
-                                      height: e.currentTarget.videoHeight
-                                    });
-                                  }}
-                                />
-                                {/* Overlays interativas no Player de Vídeo */}
-                                {detectedTargetFaces.map((face) => {
-                                  const box = getScaledBox(face.bounding_box);
-                                  if (!box) return null;
-                                  const hasMapping = !!faceMappings[face.index];
-                                  return (
-                                    <div
-                                      key={face.index}
-                                      onClick={() => setSelectedFaceForModal(face)}
-                                      className={`absolute border-2 cursor-pointer transition-all duration-200 hover:scale-105 flex items-center justify-center rounded ${
-                                        hasMapping 
-                                          ? "border-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20" 
-                                          : "border-red-500 bg-red-500/10 hover:bg-red-500/20"
-                                      }`}
-                                      style={{
-                                        left: `${box.left}px`,
-                                        top: `${box.top}px`,
-                                        width: `${box.width}px`,
-                                        height: `${box.height}px`,
-                                      }}
-                                      title={`Rosto #${face.index + 1}`}
-                                    >
-                                      <span className="px-1 py-0.5 text-[7px] font-bold text-white rounded bg-black/80 absolute bottom-1 font-mono">
-                                        Rosto #{face.index + 1}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="p-2 bg-zinc-950/80 flex items-center gap-2 border-t border-zinc-850 h-[25%] flex-shrink-0">
-                                <input
-                                  type="checkbox"
-                                  id="trim-start-check-dash"
-                                  checked={processFromCurrentPoint}
-                                  onChange={(e) => setProcessFromCurrentPoint(e.target.checked)}
-                                  className="w-3.5 h-3.5 accent-red-600 rounded cursor-pointer"
-                                />
-                                <label htmlFor="trim-start-check-dash" className="text-[9px] text-zinc-300 select-none cursor-pointer truncate">
-                                  Processar a partir deste ponto ({targetVideoTime.toFixed(1)}s)
-                                </label>
-                              </div>
-                            </div>
-                          ) : (
-                            <div ref={targetContainerRef} className="absolute inset-0 w-full h-full bg-black flex items-center justify-center overflow-hidden">
-                              <img 
-                                src={targetVideo} 
-                                alt="Target Media" 
-                                className="object-contain w-full h-full pointer-events-none" 
-                                onLoad={(e) => {
-                                  setTargetDimensions({
-                                    width: e.currentTarget.naturalWidth,
-                                    height: e.currentTarget.naturalHeight
-                                  });
-                                }}
-                              />
-                              {/* Overlays interativas no Player de Imagem */}
-                              {detectedTargetFaces.map((face) => {
-                                const box = getScaledBox(face.bounding_box);
-                                if (!box) return null;
-                                const hasMapping = !!faceMappings[face.index];
-                                return (
-                                  <div
-                                    key={face.index}
-                                    onClick={() => setSelectedFaceForModal(face)}
-                                    className={`absolute border-2 cursor-pointer transition-all duration-200 hover:scale-105 flex items-center justify-center rounded ${
-                                      hasMapping 
-                                        ? "border-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20" 
-                                        : "border-red-500 bg-red-500/10 hover:bg-red-500/20"
-                                    }`}
-                                    style={{
-                                      left: `${box.left}px`,
-                                      top: `${box.top}px`,
-                                      width: `${box.width}px`,
-                                      height: `${box.height}px`,
-                                    }}
-                                    title={`Rosto #${face.index + 1}`}
-                                  >
-                                    <span className="px-1 py-0.5 text-[7px] font-bold text-white rounded bg-black/80 absolute bottom-1 font-mono">
-                                      Rosto #{face.index + 1}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setTargetVideo(null);
-                                setTargetVideoFullPath(null);
-                                setTargetVideoName("");
-                            }}
-                            className="absolute top-3 right-3 z-30 bg-red-600/90 hover:bg-red-500 text-white p-2 rounded-lg shadow-lg hover:scale-105 active:scale-95 transition-all opacity-0 group-hover:opacity-100 cursor-pointer flex items-center justify-center border border-red-500/20"
-                            title="Substituir mídia de destino"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div 
-                          onClick={() => targetInputRef.current?.click()}
-                          onDragOver={handleDragOver}
-                          onDragEnter={(e) => handleDragEnter(e, "target")}
-                          onDragLeave={(e) => handleDragLeave(e, "target")}
-                          onDrop={(e) => handleDrop(e, "target")}
-                          className={`border border-dashed rounded-lg flex-1 w-full flex flex-col items-center justify-center p-2 transition-all duration-200 group cursor-pointer text-center ${
-                            isDraggingTarget 
-                              ? "drop-zone-active border-red-500/60" 
-                              : "border-zinc-800 hover:border-red-500/40 hover:bg-red-500/5"
-                          }`}
-                        >
-                          <Upload size={24} className={`mb-2 transition-all duration-200 ${isDraggingTarget ? "text-red-500 scale-110" : "text-zinc-600 group-hover:text-red-500"}`} />
-                          <p className="text-xs text-zinc-400 font-semibold">{isDraggingTarget ? "Solte a mídia aqui" : "Arraste imagem ou vídeo"}</p>
-                          <span className="text-[10px] text-zinc-500">ou clique para buscar</span>
-                        </div>
-                      )}
-                    </div>
+                    <TargetMediaViewer
+                      targetMedia={targetMedia}
+                      targetMediaName={targetMediaName}
+                      onUpload={handleTargetUpload}
+                      onClear={() => {
+                        setTargetMedia(null);
+                        setTargetMediaFullPath(null);
+                        setTargetMediaName("");
+                        setDetectedTargetFaces([]);
+                        setFaceMappings({});
+                      }}
+                      detectedFaces={detectedTargetFaces}
+                      faceMappings={faceMappings}
+                      onSelectFace={(face) => setSelectedFaceForModal(face)}
+                      isAnalyzing={isAnalyzingTargetFaces}
+                      onAnalyzeFaces={handleAnalyzeFaces}
+                      processFromCurrentPoint={processFromCurrentPoint}
+                      setProcessFromCurrentPoint={setProcessFromCurrentPoint}
+                      targetVideoTime={targetVideoTime}
+                      setTargetVideoTime={setTargetVideoTime}
+                      isDragging={isDraggingTarget}
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingTarget(true); }}
+                      onDragLeave={() => setIsDraggingTarget(false)}
+                      onDrop={handleDropTarget}
+                      getScaledBox={getScaledBox}
+                      targetContainerRef={targetContainerRef}
+                      setTargetDimensions={setTargetDimensions}
+                    />
                   </div>
 
-                  {/* Visual Face Mapping Panel */}
-                  {targetVideoFullPath && sourceItems.length > 0 && (
-                    <div className="bg-zinc-950/30 border border-zinc-900 rounded-xl p-5 backdrop-blur-md space-y-3 flex-shrink-0">
-                      <div className="flex justify-between items-center border-b border-zinc-900 pb-2.5">
-                        <div>
-                          <h3 className="text-xs font-bold text-white uppercase tracking-wider">Mapeamento Visual de Rostos</h3>
-                          <p className="text-[10px] text-zinc-500 mt-0.5">Associe rostos específicos detectados na mídia de destino a imagens de origem distintas.</p>
-                        </div>
-                        {detectedTargetFaces.length > 0 && (
-                          <button
-                            onClick={() => {
-                              setDetectedTargetFaces([]);
-                              setFaceMappings({});
-                            }}
-                            className="text-[10px] text-red-500 hover:text-red-400 font-bold transition-colors cursor-pointer"
-                          >
-                            Limpar Mapeamento
-                          </button>
-                        )}
-                      </div>
+                  <ProcessorSettings
+                    availableProcessors={availableProcessors}
+                    selectedProcessors={selectedProcessors}
+                    onToggleProcessor={toggleProcessor}
+                    autoPreview={autoPreview}
+                    setAutoPreview={setAutoPreview}
+                    presets={presets}
+                    selectedPresetName={selectedPresetName}
+                    onApplyPreset={handleApplyPreset}
+                    newPresetName={newPresetName}
+                    setNewPresetName={setNewPresetName}
+                    onSavePreset={handleSaveCurrentPreset}
+                    faceSwapperWeight={faceSwapperWeight}
+                    setFaceSwapperWeight={setFaceSwapperWeight}
+                    faceMaskBlur={faceMaskBlur}
+                    setFaceMaskBlur={setFaceMaskBlur}
+                    detectionThreshold={detectionThreshold}
+                    setDetectionThreshold={setDetectionThreshold}
+                    smoothing={smoothing}
+                    setSmoothing={setSmoothing}
+                    faceSwapperModel={faceSwapperModel}
+                    setFaceSwapperModel={setFaceSwapperModel}
+                    faceSwapperPixelBoost={faceSwapperPixelBoost}
+                    setFaceSwapperPixelBoost={setFaceSwapperPixelBoost}
+                    faceEnhancerModel={faceEnhancerModel}
+                    setFaceEnhancerModel={setFaceEnhancerModel}
+                    faceEnhancerBlend={faceEnhancerBlend}
+                    setFaceEnhancerBlend={setFaceEnhancerBlend}
+                    faceEnhancerWeight={faceEnhancerWeight}
+                    setFaceEnhancerWeight={setFaceEnhancerWeight}
+                    frameEnhancerModel={frameEnhancerModel}
+                    setFrameEnhancerModel={setFrameEnhancerModel}
+                    frameEnhancerBlend={frameEnhancerBlend}
+                    setFrameEnhancerBlend={setFrameEnhancerBlend}
+                    faceEditorModel={faceEditorModel}
+                    setFaceEditorModel={setFaceEditorModel}
+                    faceEditorSmile={faceEditorSmile}
+                    setFaceEditorSmile={setFaceEditorSmile}
+                    ageModifierModel={ageModifierModel}
+                    setAgeModifierModel={setAgeModifierModel}
+                    ageModifierDirection={ageModifierDirection}
+                    setAgeModifierDirection={setAgeModifierDirection}
+                    expressionRestorerFactor={expressionRestorerFactor}
+                    setExpressionRestorerFactor={setExpressionRestorerFactor}
+                  />
 
-                      {isAnalyzingTargetFaces ? (
-                        <div className="flex flex-col items-center justify-center py-6 space-y-2">
-                          <RefreshCw size={20} className="text-red-500 animate-spin" />
-                          <span className="text-[10px] text-zinc-400 font-medium">Buscando e classificando rostos na mídia...</span>
-                        </div>
-                      ) : detectedTargetFaces.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-4 text-center space-y-2">
-                          <p className="text-[10px] text-zinc-400">Nenhum rosto analisado ainda para este frame de destino.</p>
-                          <button
-                            onClick={analyzeTargetFaces}
-                            className="bg-red-600 hover:bg-red-500 text-white font-bold text-[10px] px-3.5 py-1.5 rounded-lg transition-all shadow-md shadow-red-950/50 cursor-pointer"
-                          >
-                            Detectar Rostos no Frame Atual
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
-                          {detectedTargetFaces.map((face) => {
-                            const currentMapping = faceMappings[face.index];
-                            return (
-                              <div key={face.index} className="bg-zinc-900/40 border border-zinc-850 rounded-lg p-3 flex gap-3 items-center">
-                                {/* Face Crop Thumbnail */}
-                                <div className="relative w-12 h-12 rounded overflow-hidden border border-zinc-800 bg-zinc-950 flex-shrink-0">
-                                  {face.crop_url ? (
-                                    <img src={apiUrl + face.crop_url} alt={`Rosto ${face.index}`} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">?</div>
-                                  )}
-                                  <span className="absolute bottom-0 inset-x-0 bg-black/70 text-[7px] text-zinc-300 text-center py-0.5 font-bold uppercase">
-                                    Rosto #{face.index + 1}
-                                  </span>
-                                </div>
-
-                                {/* Attributes & Mapping Selection */}
-                                <div className="flex-1 min-w-0 space-y-1.5">
-                                  <div className="text-[9px] space-x-1.5 text-zinc-400 flex items-center">
-                                    <span className="bg-zinc-800/80 px-1 py-0.5 rounded text-[8px] uppercase font-bold text-zinc-300">
-                                      {face.gender === 'male' ? 'M' : 'F'}
-                                    </span>
-                                    <span className="bg-zinc-800/80 px-1 py-0.5 rounded text-[8px] font-bold text-zinc-300">
-                                      {face.age} anos
-                                    </span>
-                                    <span className="bg-zinc-800/80 px-1 py-0.5 rounded text-[8px] capitalize font-bold text-zinc-300">
-                                      {face.race}
-                                    </span>
-                                  </div>
-
-                                  <div className="space-y-0.5">
-                                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Substituir com:</span>
-                                    <div className="flex gap-1.5 flex-wrap items-center">
-                                      {/* Option: Ignore (keep original) */}
-                                      <button
-                                        onClick={() => setFaceMappings(prev => {
-                                          const next = { ...prev };
-                                          delete next[face.index];
-                                          return next;
-                                        })}
-                                        className={`text-[8px] font-bold px-2 py-1 rounded transition-all cursor-pointer ${
-                                          !currentMapping
-                                            ? "bg-zinc-800 text-white border border-zinc-700"
-                                            : "bg-zinc-950 text-zinc-500 border border-zinc-900 hover:text-zinc-400"
-                                        }`}
-                                      >
-                                        Original
-                                      </button>
-
-                                      {/* Source thumbnails options */}
-                                      {sourceItems.map((item, sIdx) => {
-                                        const isSelected = currentMapping === item.file_path;
-                                        return (
-                                          <div
-                                            key={sIdx}
-                                            onClick={() => setFaceMappings(prev => ({
-                                              ...prev,
-                                              [face.index]: item.file_path
-                                            }))}
-                                            className={`relative w-6 h-6 rounded border overflow-hidden cursor-pointer transition-all hover:scale-105 ${
-                                              isSelected
-                                                ? "border-red-500 ring-2 ring-red-500/30"
-                                                : "border-zinc-850 hover:border-zinc-750"
-                                            }`}
-                                            title={item.filename}
-                                          >
-                                            <img src={item.url} alt={item.filename} className="w-full h-full object-cover" />
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Processadores de Frame */}
-                  <div className="bg-zinc-950/30 border border-zinc-900 rounded-xl p-4 flex flex-col flex-[0.8] min-h-[100px] overflow-hidden">
-                    <div className="flex items-center gap-2 text-white font-bold border-b border-zinc-900 pb-1.5 mb-2">
-                      <Cpu size={14} className="text-red-500" />
-                      <h3 className="text-xs">Processadores de Frame</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto pr-1">
-                      {availableProcessors.map(proc => (
-                        <button
-                          key={proc}
-                          type="button"
-                          onClick={() => toggleProcessor(proc)}
-                          className={`flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all duration-200 ${
-                            selectedProcessors.includes(proc)
-                              ? "bg-red-500/10 border-red-500/40 text-red-400"
-                              : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span className="truncate">{proc.replace("_", " ").toUpperCase()}</span>
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ml-2 transition-colors ${selectedProcessors.includes(proc) ? "bg-red-500" : "bg-zinc-700"}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Parâmetros e Sliders */}
-                  <div className="bg-zinc-950/30 border border-zinc-900 rounded-xl p-4 flex flex-col flex-[1.1] min-h-[140px] justify-center">
-                    <div className="flex items-center justify-between border-b border-zinc-900 pb-1.5 mb-3">
-                      <div className="flex items-center gap-2 text-white font-bold">
-                        <Sliders size={14} className="text-red-500" />
-                        <h3 className="text-xs">Ajustes Técnicos do Processador</h3>
-                      </div>
-                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={autoPreview}
-                          onChange={(e) => setAutoPreview(e.target.checked)}
-                          className="w-3 h-3 accent-red-600 rounded cursor-pointer"
-                        />
-                        <span className="text-[10px] text-zinc-400 font-bold hover:text-zinc-200 transition-colors">Preview Automático</span>
-                      </label>
-                    </div>
-
-                    {/* Presets Selection & Saving */}
-                    <div className="flex items-center gap-3 bg-zinc-900/30 border border-zinc-900 rounded-lg p-2.5 mb-3 justify-between flex-wrap flex-shrink-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Preset:</span>
-                        <select
-                          value={selectedPresetName}
-                          onChange={(e) => handleApplyPreset(e.target.value)}
-                          className="bg-zinc-950 border border-zinc-850 text-zinc-300 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-red-500 transition-colors"
-                        >
-                          <option value="" disabled>Selecionar preset...</option>
-                          {presets.map((p, idx) => (
-                            <option key={idx} value={p.name}>
-                              {p.name} {p.isCustom ? "(Custom)" : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          placeholder="Nome do preset..."
-                          value={newPresetName}
-                          onChange={(e) => setNewPresetName(e.target.value)}
-                          className="bg-zinc-950 border border-zinc-850 text-zinc-300 text-[10px] rounded-lg px-2 py-1 w-28 focus:outline-none focus:border-red-500 transition-colors placeholder:text-zinc-600"
-                        />
-                        <button
-                          onClick={handleSavePreset}
-                          className="bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-red-500/20"
-                        >
-                          <Save size={10} />
-                          Salvar
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto pr-1 space-y-4 scrollbar-thin max-h-[300px]">
-                      {selectedProcessors.includes("face_swapper") && (
-                        <div className="space-y-3">
-                          <div className="text-[10px] font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-1">
-                            Ajustes de Face Swapper (Substituição de Rosto)
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Modelo do Swapper</span>
-                              <select
-                                value={faceSwapperModel}
-                                onChange={(e) => setFaceSwapperModel(e.target.value)}
-                                className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-500 transition-colors"
-                              >
-                                <option value="inswapper_128_fp16">InsightFace FP16 (Melhor Geral)</option>
-                                <option value="inswapper_128">InsightFace INT8 (Rápido)</option>
-                                <option value="simswap_unofficial_512">SimSwap 512 (Alta Qualidade)</option>
-                                <option value="simswap_256">SimSwap 256</option>
-                                <option value="hyperswap_1a_256">HyperSwap 1A</option>
-                                <option value="hyperswap_1b_256">HyperSwap 1B</option>
-                                <option value="hyperswap_1c_256">HyperSwap 1C</option>
-                                <option value="blendswap_256">BlendSwap 256</option>
-                                <option value="uniface_256">UniFace 256</option>
-                                <option value="ghost_1_256">Ghost 1</option>
-                                <option value="ghost_2_256">Ghost 2</option>
-                                <option value="ghost_3_256">Ghost 3</option>
-                                <option value="hififace_unofficial_256">HiFiFace 256</option>
-                              </select>
-                            </div>
-
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Pixel Boost (Resolução)</span>
-                              <select
-                                value={faceSwapperPixelBoost || ""}
-                                onChange={(e) => setFaceSwapperPixelBoost(e.target.value || "")}
-                                className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-500 transition-colors"
-                              >
-                                <option value="">Sem Boost (Padrão)</option>
-                                <option value="256x256">256x256</option>
-                                <option value="384x384">384x384</option>
-                                <option value="512x512">512x512 (Recomendado)</option>
-                                <option value="768x768">768x768</option>
-                                <option value="1024x1024">1024x1024 (Qualidade Máxima)</option>
-                              </select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-zinc-300">Face Swapper Weight</span>
-                                <span className="text-red-500 font-mono">{faceSwapperWeight.toFixed(2)}</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="1" step="0.05"
-                                value={faceSwapperWeight}
-                                onChange={e => setFaceSwapperWeight(parseFloat(e.target.value))}
-                                className="w-full accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-zinc-300">Face Mask Blur</span>
-                                <span className="text-red-500 font-mono">{faceMaskBlur}px</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="50" step="1"
-                                value={faceMaskBlur}
-                                onChange={e => setFaceMaskBlur(parseInt(e.target.value))}
-                                className="w-full accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-zinc-300">Limiar de Detecção</span>
-                                <span className="text-red-500 font-mono">{detectionThreshold.toFixed(2)}</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="1" step="0.05"
-                                value={detectionThreshold}
-                                onChange={e => setDetectionThreshold(parseFloat(e.target.value))}
-                                className="w-full accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-zinc-300">Suavização (Smoothing)</span>
-                                <span className="text-red-500 font-mono">{smoothing}px</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="20" step="1"
-                                value={smoothing}
-                                onChange={e => setSmoothing(parseInt(e.target.value))}
-                                className="w-full accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Face Enhancer Settings */}
-                      {selectedProcessors.includes("face_enhancer") && (
-                        <div className="space-y-3">
-                          <div className="text-[10px] font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-1 pt-1">
-                            Ajustes de Face Enhancer (Melhoria Facial)
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Modelo</span>
-                              <select
-                                value={faceEnhancerModel}
-                                onChange={(e) => setFaceEnhancerModel(e.target.value)}
-                                className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-500 transition-colors"
-                              >
-                                <option value="gfpgan_1.4">GFPGAN 1.4 (Padrão)</option>
-                                <option value="codeformer">CodeFormer (Melhor Detalhe)</option>
-                                <option value="gpen_bfr_512">GPEN-BFR 512</option>
-                                <option value="restoreformer_plus_plus">RestoreFormer++</option>
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-zinc-300">Blend (Mesclagem)</span>
-                                <span className="text-red-500 font-mono">{faceEnhancerBlend}%</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="100" step="5"
-                                value={faceEnhancerBlend}
-                                onChange={e => setFaceEnhancerBlend(parseInt(e.target.value))}
-                                className="w-full accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-zinc-300">Weight (Peso)</span>
-                                <span className="text-red-500 font-mono">{faceEnhancerWeight.toFixed(2)}</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="1" step="0.05"
-                                value={faceEnhancerWeight}
-                                onChange={e => setFaceEnhancerWeight(parseFloat(e.target.value))}
-                                className="w-full accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Frame Enhancer Settings */}
-                      {selectedProcessors.includes("frame_enhancer") && (
-                        <div className="space-y-3">
-                          <div className="text-[10px] font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-1 pt-1">
-                            Ajustes de Frame Enhancer (Super Resolução)
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Modelo</span>
-                              <select
-                                value={frameEnhancerModel}
-                                onChange={(e) => setFrameEnhancerModel(e.target.value)}
-                                className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-500 transition-colors"
-                              >
-                                <option value="span_kendata_x4">Span Kendata x4 (Padrão)</option>
-                                <option value="real_esrgan_x4_fp16">RealESRGAN x4 (Alta Qualidade)</option>
-                                <option value="ultra_sharp_x4">UltraSharp x4 (Nítido)</option>
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-zinc-300">Blend (Mesclagem)</span>
-                                <span className="text-red-500 font-mono">{frameEnhancerBlend}%</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="100" step="5"
-                                value={frameEnhancerBlend}
-                                onChange={e => setFrameEnhancerBlend(parseInt(e.target.value))}
-                                className="w-full accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Direita: Preview Compartivo */}
-                <div className="space-y-4 flex flex-col overflow-hidden h-full">
-                  <div className="bg-zinc-950/30 border border-zinc-900 rounded-xl p-4 flex-1 flex flex-col justify-between overflow-hidden">
-                    <div className="flex items-center justify-between text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                      <span>Visualização de Resultado</span>
-                      <div className="flex items-center gap-2">
-                        {previewOutputUrl && (
-                          <button
-                            onClick={handleDownloadOutput}
-                            className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 px-2 py-0.5 rounded font-bold transition-all cursor-pointer flex items-center gap-1"
-                            title="Baixar resultado"
-                          >
-                            <Download size={10} />
-                            Baixar
-                          </button>
-                        )}
-                        <span className="text-[10px] bg-red-600/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded font-bold">1080p</span>
-                      </div>
-                    </div>
-
-                    <div 
-                      ref={videoContainerRef}
-                      className="relative flex-1 w-full bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden select-none min-h-[200px]"
+                  {/* Actions Bar */}
+                  <div className="flex gap-3 flex-shrink-0 pt-2">
+                    <button
+                      onClick={() => handleGeneratePreview(false)}
+                      disabled={isPreviewLoading || !sourceImageFullPath || !targetMediaFullPath}
+                      className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-3 rounded-xl text-xs transition-all border border-zinc-800 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      {/* Imagem/Vídeo de Visualização de Resultado (Efeito Pretendido) */}
-                      {previewOutputUrl ? (
-                        <div className="absolute inset-0 w-full h-full flex items-center justify-center">
-                          {previewOutputUrl.match(/\.(mp4|webm|mkv|avi|mov)/i) ? (
-                            <video 
-                              ref={swappedVideoRef}
-                              src={previewOutputUrl} 
-                              className="absolute inset-0 object-contain w-full h-full pointer-events-none" 
-                              muted 
-                              loop 
-                              playsInline
-                              onTimeUpdate={handleTimeUpdate}
-                              onLoadedMetadata={handleLoadedMetadata}
-                            />
-                          ) : (
-                            <img 
-                              src={previewOutputUrl} 
-                              alt="Swapped Output" 
-                              className="absolute inset-0 object-contain w-full h-full pointer-events-none" 
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-500 gap-2 p-4">
-                          <ImageIcon size={32} className="text-zinc-700" />
-                          <span className="text-xs font-semibold text-zinc-400">Sem Visualização de Saída</span>
-                          <span className="text-[10px] text-zinc-600 text-center max-w-[220px]">
-                            Selecione a origem/destino e inicie o processamento para ver o resultado aqui.
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                      {isPreviewLoading ? <RefreshCw size={14} className="animate-spin text-amber-500" /> : <Play size={14} />}
+                      GERAR PREVIEW
+                    </button>
 
-                    <div className="flex items-center gap-4 bg-zinc-950/55 border border-zinc-900 rounded-lg p-2.5 mt-2">
-                      <button 
-                        onClick={() => setIsPlaying(!isPlaying)} 
-                        disabled={!previewOutputUrl || !previewOutputUrl.match(/\.(mp4|webm|mkv|avi|mov)/i)}
-                        className="text-zinc-200 hover:text-red-500 transition-colors disabled:text-zinc-700 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-                      </button>
-                      
-                      <input
-                        type="range"
-                        min={0}
-                        max={videoDuration || 100}
-                        step={0.1}
-                        value={currentTime}
-                        disabled={!previewOutputUrl || !previewOutputUrl.match(/\.(mp4|webm|mkv|avi|mov)/i)}
-                        onChange={(e) => handleSeek(parseFloat(e.target.value))}
-                        className="flex-1 accent-red-600 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      />
-
-                      <span className="text-[10px] text-zinc-500 font-mono select-none">
-                        {formatTime(currentTime)} / {formatTime(videoDuration)}
-                      </span>
-                      
-                      <button 
-                        onClick={() => setIsMuted(!isMuted)}
-                        disabled={!previewOutputUrl || !previewOutputUrl.match(/\.(mp4|webm|mkv|avi|mov)/i)}
-                        className="text-zinc-400 hover:text-zinc-200 transition-colors disabled:text-zinc-700 disabled:cursor-not-allowed cursor-pointer"
-                        title={isMuted ? "Unmute" : "Mute"}
-                      >
-                        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                      </button>
-                      
-                      <button 
-                        onClick={handleFullscreen}
-                        disabled={!previewOutputUrl}
-                        className="text-zinc-400 hover:text-zinc-200 transition-colors disabled:text-zinc-700 disabled:cursor-not-allowed cursor-pointer"
-                        title="Tela Cheia"
-                      >
-                        <Maximize2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end flex-shrink-0">
-                    <div className="bg-zinc-950/30 border border-zinc-900 rounded-xl p-4 space-y-2">
-                      <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Opções de Exportação</span>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] text-zinc-500 block mb-1">Formato</label>
-                          <div className="relative">
-                            <select value={outputFormat} onChange={e => setOutputFormat(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded appearance-none font-bold text-zinc-200 outline-none cursor-pointer">
-                              <option>MP4</option><option>WEBM</option><option>MKV</option>
-                            </select>
-                            <ChevronDown size={12} className="absolute right-2 top-2.5 text-zinc-500 pointer-events-none" />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-zinc-500 block mb-1">Qualidade</label>
-                          <div className="relative">
-                            <select value={outputQuality} onChange={e => setOutputQuality(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded appearance-none font-bold text-zinc-200 outline-none cursor-pointer">
-                              <option>High</option><option>Medium</option><option>Low</option>
-                            </select>
-                            <ChevronDown size={12} className="absolute right-2 top-2.5 text-zinc-500 pointer-events-none" />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-zinc-500 block mb-1">Resolução</label>
-                          <div className="relative">
-                            <select value={outputResolution} onChange={e => setOutputResolution(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded appearance-none font-bold text-zinc-200 outline-none cursor-pointer">
-                              <option>1080p</option><option>720p</option><option>4K</option>
-                            </select>
-                            <ChevronDown size={12} className="absolute right-2 top-2.5 text-zinc-500 pointer-events-none" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      {/* Botão de Preview Rápido */}
-                      <button
-                        onClick={() => handleGeneratePreview(targetVideoTime > 0 ? targetVideoTime : currentTime, false)}
-                        disabled={isPreviewLoading || isGenerating || !sourceImageFullPath || !targetVideoFullPath}
-                        className={`h-12 px-5 font-bold rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg transition-all duration-200 border ${
-                          isPreviewLoading
-                            ? "bg-zinc-800 border-zinc-700 cursor-not-allowed text-zinc-500"
-                            : !sourceImageFullPath || !targetVideoFullPath
-                              ? "bg-zinc-800/50 border-zinc-800 cursor-not-allowed text-zinc-600"
-                              : "bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-200 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                        }`}
-                        title="Gerar preview rápido (um frame)"
-                      >
-                        {isPreviewLoading ? (
-                          <RefreshCw size={16} className="animate-spin text-zinc-500" />
-                        ) : (
-                          <Eye size={16} className={sourceImageFullPath && targetVideoFullPath ? "text-amber-500" : "text-zinc-600"} />
-                        )}
-                        <span className="hidden md:inline">{isPreviewLoading ? "Gerando..." : "Preview"}</span>
-                      </button>
-
-                      {/* Botão Principal de Processamento */}
-                      <button
-                        onClick={handleGenerateSwap}
-                        disabled={isGenerating}
-                        className={`flex-1 h-12 font-extrabold rounded-xl flex items-center justify-center gap-2 text-white shadow-lg transition-all duration-200 ${
-                          isGenerating
-                            ? "bg-zinc-800 border border-zinc-700 cursor-not-allowed text-zinc-500"
-                            : "bg-red-600 hover:bg-red-500 hover:scale-[1.02] active:scale-[0.98] shadow-red-600/20 cursor-pointer animate-pulse-glow"
-                        }`}
-                      >
-                        {isGenerating ? (
-                          <><RefreshCw size={18} className="animate-spin text-zinc-500" />PROCESSANDO...</>
-                        ) : (
-                          "INICIAR PROCESSAMENTO (SWAP)"
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleGenerateSwap}
+                      disabled={isGenerating || !sourceImageFullPath || !targetMediaFullPath}
+                      className="flex-[2] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold py-3 rounded-xl text-xs tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                      INICIAR PROCESSAMENTO
+                    </button>
                   </div>
                 </div>
+
+                {/* Direita: Preview Comparativo */}
+                <VideoComparator
+                  previewOutputUrl={previewOutputUrl}
+                  onDownloadOutput={handleDownloadOutput}
+                  outputFormat={outputFormat}
+                  setOutputFormat={setOutputFormat}
+                  outputQuality={outputQuality}
+                  setOutputQuality={setOutputQuality}
+                />
               </div>
             </div>
           )}
 
-          {/* ABA 3: PROJETOS (GALERIA) */}
+          {/* TAB 2: PROJETOS */}
           {activeTab === "projects" && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4">
-                <div className="flex items-center gap-3">
-                  <FolderOpen className="text-red-500" size={24} />
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Galeria de Projetos</h2>
-                    <p className="text-xs text-zinc-500">Histórico de todas as manipulações criadas e seus arquivos.</p>
-                  </div>
-                </div>
-
-                {/* Filtros */}
-                <div className="flex items-center gap-2 bg-zinc-900/50 p-1 border border-zinc-800 rounded-lg">
-                  <button
-                    onClick={() => setProjectFilter("all")}
-                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${projectFilter === "all" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
-                  >
-                    Todos
-                  </button>
-                  <button
-                    onClick={() => setProjectFilter("completed")}
-                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${projectFilter === "completed" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
-                  >
-                    Concluídos
-                  </button>
-                  <button
-                    onClick={() => setProjectFilter("processing")}
-                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${projectFilter === "processing" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
-                  >
-                    Ativos
-                  </button>
-                  <button
-                    onClick={() => setProjectFilter("failed")}
-                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${projectFilter === "failed" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
-                  >
-                    Falhas
-                  </button>
-                </div>
-              </div>
-
-              {/* Grid de Projetos com limite de 2 linhas e rolagem vertical */}
-              <div className="max-h-[790px] overflow-y-auto pr-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {filteredJobs.map((job, index) => (
-                    <div 
-                      key={job.id} 
-                      className="bg-zinc-950/40 border border-zinc-900 rounded-xl overflow-hidden flex flex-col justify-between group hover:border-zinc-700 transition-all duration-200"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      {/* Preview Media */}
-                      <div className="aspect-[16/10] bg-zinc-900/60 flex items-center justify-center border-b border-zinc-900 relative">
-                        {job.status === "completed" && job.outputUrl ? (
-                          job.outputUrl.match(/\.(mp4|webm|mkv|avi|mov)/i) ? (
-                            <video src={job.outputUrl} className="w-full h-full object-cover" muted loop autoPlay />
-                          ) : (
-                            <img src={job.outputUrl} alt="Output" className="w-full h-full object-cover" />
-                          )
-                        ) : job.status === "failed" ? (
-                          <div className="flex flex-col items-center gap-2 p-4 text-center">
-                            <AlertCircle size={32} className="text-red-500" />
-                            <span className="text-xs font-bold text-zinc-400">Falha no Processamento</span>
-                            <div className="max-h-[80px] overflow-y-auto text-[10px] text-zinc-600 bg-black/40 p-2 rounded max-w-[200px] break-all border border-zinc-900 font-mono">
-                              {job.error_message || "Erro desconhecido durante execução."}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 text-zinc-500 w-full">
-                            <RefreshCw size={32} className="animate-spin text-amber-500" />
-                            <span className="text-xs font-bold text-center px-4 max-w-full truncate">
-                              {job.step || "Processando"} ({job.progress}%)
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Status Overlay Badge */}
-                        <div className="absolute top-3 right-3">
-                          {job.status === "completed" ? (
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-extrabold uppercase">Concluído</span>
-                          ) : job.status === "failed" ? (
-                            <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-extrabold uppercase">Falhou</span>
-                          ) : (
-                            <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-extrabold uppercase animate-pulse">Ativo</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Card Details */}
-                      <div className="p-5 space-y-4">
-                        <div>
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-bold text-sm text-white truncate max-w-[150px]">{job.id}</h3>
-                            <span className="text-[10px] text-zinc-500 font-semibold">{job.time}</span>
-                          </div>
-                          <p className="text-xs text-zinc-400">Face Swap Pipeline</p>
-                        </div>
-
-                        {/* Ações */}
-                        <div className="flex items-center gap-2 border-t border-zinc-900 pt-4">
-                          {job.status === "completed" && (
-                            <>
-                              <button
-                                onClick={() => handleLoadToComparator(job)}
-                                className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 border border-zinc-800 cursor-pointer"
-                              >
-                                <ExternalLink size={12} /> Comparar
-                              </button>
-                              <a
-                                href={job.outputUrl}
-                                download={`faceswap-${job.id}`}
-                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs p-2 rounded-lg font-bold transition-all border border-zinc-800 flex items-center justify-center"
-                                title="Baixar Mídia de Saída"
-                              >
-                                <Download size={14} />
-                              </a>
-                            </>
-                          )}
-                          <button
-                            onClick={() => setJobToDelete(job.id)}
-                            className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-xs p-2 rounded-lg font-bold transition-all flex items-center justify-center cursor-pointer"
-                            title="Excluir Tarefa"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {filteredJobs.length === 0 && (
-                <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-12 text-center text-zinc-500 max-w-md mx-auto">
-                  Nenhum projeto encontrado para o filtro selecionado.
-                </div>
-              )}
-            </div>
+            <JobsList
+              jobs={jobs}
+              onLoadToComparator={handleLoadToComparator}
+              onRequestDelete={(id) => setJobToDelete(id)}
+              onCancelJob={async (id) => {
+                const ok = await cancelJob(id);
+                if (ok) showToast("info", "Cancelamento", `Sinal de cancelamento enviado para ${id}.`);
+                else showToast("error", "Erro", "Não foi possível cancelar.");
+              }}
+            />
           )}
 
-          {/* ABA 4: CONFIGURAÇÕES */}
+          {/* TAB 3: CONFIGURAÇÕES */}
           {activeTab === "settings" && (
-            <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-              <div className="flex items-center gap-3 border-b border-zinc-900 pb-4">
-                <Settings className="text-red-500" size={24} />
-                <div>
-                  <h2 className="text-xl font-bold text-white">Configurações do Sistema</h2>
-                  <p className="text-xs text-zinc-500">Gerencie diretórios, níveis de log e parâmetros de aceleração de hardware.</p>
-                </div>
-              </div>
-
-              <form onSubmit={handleSaveConfig} className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-6 space-y-6">
-                
-                {/* Diretórios */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Folder size={16} className="text-red-500" /> Diretórios do Sistema
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs text-zinc-400 font-semibold">Caminho Temporário (Temp Path)</label>
-                      <input
-                        type="text"
-                        value={configTempPath}
-                        onChange={e => setConfigTempPath(e.target.value)}
-                        placeholder="Ex: .temp"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-zinc-400 font-semibold">Pasta de Tarefas (Jobs Path)</label>
-                      <input
-                        type="text"
-                        value={configJobsPath}
-                        onChange={e => setConfigJobsPath(e.target.value)}
-                        placeholder="Ex: .jobs"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Aceleração de Hardware */}
-                <div className="space-y-4 border-t border-zinc-900 pt-6">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Cpu size={16} className="text-red-500" /> Aceleração e Performance
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs text-zinc-400 font-semibold font-sans">Estratégia de Memória do Vídeo</label>
-                      <select
-                        value={configMemoryStrategy}
-                        onChange={e => setConfigMemoryStrategy(e.target.value)}
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors cursor-pointer"
-                      >
-                        <option value="strict">Strict (Baixo Uso)</option>
-                        <option value="balanced">Balanced (Equilibrado)</option>
-                        <option value="tolerant">Tolerant (Desempenho Máximo)</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs text-zinc-400 font-semibold">Quantidade de Threads</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="32"
-                        value={configThreadCount}
-                        onChange={e => setConfigThreadCount(parseInt(e.target.value) || 1)}
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs text-zinc-400 font-semibold block">Provedores de Execução Disponíveis</label>
-                    <div className="flex flex-wrap gap-2">
-                      {availableProviders.map(prov => {
-                        const isSelected = configProviders.includes(prov);
-                        return (
-                          <button
-                            key={prov}
-                            type="button"
-                            onClick={() => {
-                              if (isSelected) {
-                                if (configProviders.length > 1) {
-                                  setConfigProviders(configProviders.filter(p => p !== prov));
-                                }
-                              } else {
-                                setConfigProviders([...configProviders, prov]);
-                              }
-                            }}
-                            className={`px-3 py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1.5 border transition-all duration-200 cursor-pointer ${
-                              isSelected
-                                ? "bg-red-500/20 border-red-500/40 text-red-400"
-                                : "bg-zinc-900/60 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700"
-                            }`}
-                          >
-                            {isSelected && <CheckCircle size={10} />}
-                            {prov}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sistema Geral */}
-                <div className="space-y-4 border-t border-zinc-900 pt-6">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Terminal size={16} className="text-red-500" />Logs e Monitoramento
-                  </h3>
-                  <div className="space-y-1">
-                    <label className="text-xs text-zinc-400 font-semibold">Nível de Log (Log Level)</label>
-                    <select
-                      value={configLogLevel}
-                      onChange={e => setConfigLogLevel(e.target.value)}
-                      className="w-full bg-zinc-900/60 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors cursor-pointer"
-                    >
-                      <option value="error">Error</option>
-                      <option value="warning">Warning</option>
-                      <option value="info">Info</option>
-                      <option value="debug">Debug</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="border-t border-zinc-900 pt-6 flex justify-between items-center">
-                  <button
-                    type="button"
-                    onClick={handleExportDiagnostic}
-                    className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold px-6 py-2.5 rounded-lg text-xs transition-all border border-zinc-800 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Download size={14} />
-                    EXPORTAR DIAGNÓSTICO
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isSavingConfig}
-                    className="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-2.5 rounded-lg text-xs transition-all shadow-lg shadow-red-600/20 flex items-center gap-2 cursor-pointer disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
-                  >
-                    {isSavingConfig ? <RefreshCw size={14} className="animate-spin" /> : null}
-                    SALVAR CONFIGURAÇÕES
-                  </button>
-                </div>
-              </form>
-            </div>
+            <SettingsModal
+              apiUrl={apiUrl}
+              configTempPath={configTempPath}
+              setConfigTempPath={setConfigTempPath}
+              configJobsPath={configJobsPath}
+              setConfigJobsPath={setConfigJobsPath}
+              configMemoryStrategy={configMemoryStrategy}
+              setConfigMemoryStrategy={setConfigMemoryStrategy}
+              configThreadCount={configThreadCount}
+              setConfigThreadCount={setConfigThreadCount}
+              configLogLevel={configLogLevel}
+              setConfigLogLevel={setConfigLogLevel}
+              configProviders={configProviders}
+              setConfigProviders={setConfigProviders}
+              availableProviders={availableProviders}
+              isSavingConfig={isSavingConfig}
+              onSaveConfig={handleSaveConfig}
+              onExportDiagnostic={handleExportDiagnostic}
+              showToast={showToast}
+            />
           )}
-
         </div>
       </main>
 
+      {/* Modal de Mapeamento de Rosto */}
+      <FaceMappingModal
+        apiUrl={apiUrl}
+        selectedFace={selectedFaceForModal}
+        onClose={() => setSelectedFaceForModal(null)}
+        sourceItems={sourceItems}
+        faceMappings={faceMappings}
+        onSelectMapping={(faceIdx, sourcePath) => {
+          setFaceMappings(prev => {
+            const next = { ...prev };
+            if (sourcePath) {
+              next[faceIdx] = sourcePath;
+            } else {
+              delete next[faceIdx];
+            }
+            return next;
+          });
+          setSelectedFaceForModal(null);
+        }}
+      />
+
       {/* Modal de Confirmação de Exclusão */}
       {jobToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-black/80 animate-slide-up">
-            <h3 className="text-base font-bold text-white mb-2">Confirmar Exclusão</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-black/80">
+            <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
+              <AlertCircle size={18} className="text-red-500" /> Confirmar Exclusão
+            </h3>
             <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
-              Deseja realmente excluir a tarefa <span className="text-red-500 font-mono font-bold">{jobToDelete}</span>? Esta ação é irreversível e removerá todos os arquivos e mídias associados.
+              Deseja realmente excluir a tarefa <span className="text-red-500 font-mono font-bold">{jobToDelete}</span>?
+              Esta ação removerá todos os arquivos e mídias associados do disco.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setJobToDelete(null)}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 transition-all cursor-pointer"
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
-                onClick={handleDeleteJob}
+                onClick={handleDeleteJobConfirmed}
                 className="px-4 py-2 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20 transition-all cursor-pointer"
               >
-                Excluir
+                Excluir Tarefa
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Modal de Mapeamento de Rosto Focado */}
-      {selectedFaceForModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-zinc-950/95 border border-zinc-800 rounded-2xl w-full max-w-md p-6 relative backdrop-blur-xl shadow-2xl flex flex-col space-y-4">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center border-b border-zinc-900 pb-3">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                Mapeamento do Rosto #{selectedFaceForModal.index + 1}
-              </h3>
-              <button 
-                onClick={() => setSelectedFaceForModal(null)}
-                className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Rosto Crop e Demografia */}
-            <div className="flex gap-4 items-center bg-zinc-900/40 p-4 rounded-xl border border-zinc-900">
-              <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex-shrink-0">
-                {selectedFaceForModal.crop_url ? (
-                  <img src={apiUrl + selectedFaceForModal.crop_url} alt="Recorte" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">?</div>
-                )}
-              </div>
-              <div className="space-y-1.5 min-w-0">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Atributos Estimados</span>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="bg-zinc-800/80 px-2 py-0.5 rounded text-[10px] font-bold text-zinc-300">
-                    Gênero: {selectedFaceForModal.gender === 'male' ? 'Masculino' : 'Feminino'}
-                  </span>
-                  <span className="bg-zinc-800/80 px-2 py-0.5 rounded text-[10px] font-bold text-zinc-300">
-                    Idade: {selectedFaceForModal.age} anos
-                  </span>
-                  <span className="bg-zinc-800/80 px-2 py-0.5 rounded text-[10px] font-bold text-zinc-300 capitalize">
-                    Raça: {selectedFaceForModal.race}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Grade de Origens para Seleção */}
-            <div className="space-y-2">
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Escolha a Imagem de Substituição</span>
-              
-              <div className="grid grid-cols-4 gap-2.5 max-h-[160px] overflow-y-auto pr-1">
-                {/* Opção: Manter Original */}
-                <div
-                  onClick={() => {
-                    setFaceMappings(prev => {
-                      const next = { ...prev };
-                      delete next[selectedFaceForModal.index];
-                      return next;
-                    });
-                    setSelectedFaceForModal(null);
-                    showToast("info", "Mapeamento Removido", `Rosto #${selectedFaceForModal.index + 1} mantido original.`);
-                  }}
-                  className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
-                    !faceMappings[selectedFaceForModal.index]
-                      ? "border-red-500 bg-red-500/10 text-white"
-                      : "border-zinc-850 hover:border-zinc-750 text-zinc-400 bg-zinc-900/30"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold">Original</span>
-                </div>
-
-                {/* Origens da Galeria */}
-                {sourceItems.map((item, sIdx) => {
-                  const isSelected = faceMappings[selectedFaceForModal.index] === item.file_path;
-                  return (
-                    <div
-                      key={sIdx}
-                      onClick={() => {
-                        setFaceMappings(prev => ({
-                          ...prev,
-                          [selectedFaceForModal.index]: item.file_path
-                        }));
-                        setSelectedFaceForModal(null);
-                        showToast("success", "Rosto Mapeado", `Substituindo rosto #${selectedFaceForModal.index + 1} com ${item.filename}`);
-                      }}
-                      className={`relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all hover:scale-105 ${
-                        isSelected
-                          ? "border-red-500 ring-2 ring-red-500/30"
-                          : "border-zinc-850 hover:border-zinc-750"
-                      }`}
-                      title={item.filename}
-                    >
-                      <img src={item.url} alt={item.filename} className="w-full h-full object-cover" />
-                      {isSelected && (
-                        <div className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5 z-10">
-                          <Check size={8} className="stroke-[3]" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => setSelectedFaceForModal(null)}
-                className="bg-zinc-900 hover:bg-zinc-850 text-white px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors border border-zinc-850"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

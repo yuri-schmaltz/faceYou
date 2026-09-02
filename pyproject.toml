@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "my-facefusion"
-version = "3.6.1"
+version = "3.7.0-my.1"
 description = "Next-generation face manipulation application with decoupled architecture"
 authors = ["Yuri Schmaltz <yurischmaltz@gmail.com>"]
 readme = "README.md"
@@ -17,8 +17,6 @@ scipy = "1.17.1"
 fastapi = "^0.110.0"
 uvicorn = {extras = ["standard"], version = "^0.28.0"}
 sqlalchemy = "^2.0.28"
-celery = "^5.3.6"
-redis = "^5.0.3"
 python-multipart = "^0.0.9"
 gradio = "5.44.1"
 gradio-rangeslider = "0.0.8"

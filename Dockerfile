@@ -1,10 +1,21 @@
-# Usar imagem oficial NVIDIA CUDA runtime baseada no Ubuntu 22.04
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+# Stage 1: Build the static Next.js frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
 
-# Evitar prompts interativos durante instalação de pacotes do apt
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ ./
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# Stage 2: NVIDIA CUDA runtime Ubuntu 22.04
+FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04 AS runtime
+
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 
-# Instalar dependências do sistema necessárias (Python, FFMPEG, Curl, etc.)
+# Instalar dependências do sistema necessárias
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.10 \
     python3-pip \
@@ -15,36 +26,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Vincular python e python3
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
-# Definir diretório de trabalho
 WORKDIR /app
 
-# Instalar dependências do Python necessárias para o FaceFusion e API FastAPI
+# Copiar e instalar dependências do Python a partir de requirements.txt
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    gradio==5.44.1 \
-    gradio-rangeslider==0.0.8 \
-    numpy==2.2.1 \
-    onnx==1.21.0 \
-    opencv-python-headless==4.10.0.84 \
-    tqdm==4.67.3 \
-    scipy==1.14.1 \
-    fastapi==0.110.0 \
-    uvicorn[standard]==0.28.0 \
-    sqlalchemy==2.0.28 \
-    python-multipart==0.0.9
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir onnxruntime-gpu==1.24.4
 
-# Instalar ONNX Runtime com suporte a aceleração por GPU (CUDA)
-RUN pip install --no-cache-dir onnxruntime-gpu==1.16.3
-
-# Copiar os arquivos do código-fonte (excluindo itens do .dockerignore)
+# Copiar o restante da aplicação
 COPY . /app
+
+# Copiar os arquivos compilados do frontend gerados no Stage 1
+COPY --from=frontend-builder /app/frontend/out /app/frontend/out
 
 # Expor a porta da API
 EXPOSE 8000
 
-# Definir variáveis de ambiente e rodar o servidor FastAPI
 ENV PYTHONPATH=/app
-CMD ["python", "facefusion/api/main.py"]
+
+# Ponto de entrada oficial da aplicação desacoplada
+CMD ["python", "run_api.py"]

@@ -8,6 +8,32 @@ from facefusion import state_manager
 
 
 _worker_stop_event = threading.Event()
+_current_running_job_id = None
+_current_job_lock = threading.Lock()
+
+
+def get_current_job_id():
+    with _current_job_lock:
+        return _current_running_job_id
+
+
+def set_current_job_id(job_id):
+    global _current_running_job_id
+    with _current_job_lock:
+        _current_running_job_id = job_id
+
+
+def cancel_running_job(job_id: str) -> bool:
+    """
+    Sinaliza ao process_manager do FaceFusion para abortar o job atualmente em execução.
+    """
+    with _current_job_lock:
+        if _current_running_job_id == job_id:
+            from facefusion import process_manager
+            process_manager.stop()
+            print(f"[Worker] Sinal de cancelamento enviado para o job {job_id}.", flush=True)
+            return True
+    return False
 
 
 def start_worker():
@@ -76,6 +102,7 @@ def worker_loop():
                 db.close()
                 
                 try:
+                    set_current_job_id(job_id)
                     from facefusion.logger import set_job_context
                     set_job_context(job_id)
 
@@ -88,7 +115,10 @@ def worker_loop():
                     db = SessionLocal()
                     job_to_update = db.query(JobModel).filter_by(id=job_id).first()
                     if job_to_update:
-                        if success:
+                        # Se já foi marcado como cancelado, não sobrescrever para completed
+                        if job_to_update.status == "failed" and "Cancelado" in (job_to_update.error_message or ""):
+                            print(f"[Worker] Job {job_id} foi cancelado pelo usuário.", flush=True)
+                        elif success:
                             job_to_update.status = "completed"
                             job_to_update.progress = 100
                             print(f"[Worker] Job {job_id} concluído com sucesso.", flush=True)
@@ -108,12 +138,14 @@ def worker_loop():
                     db = SessionLocal()
                     job_to_update = db.query(JobModel).filter_by(id=job_id).first()
                     if job_to_update:
-                        job_to_update.status = "failed"
-                        job_to_update.progress = 0
-                        job_to_update.error_message = f"Exceção: {str(e)}\n{error_trace}"
-                        db.commit()
+                        if not (job_to_update.status == "failed" and "Cancelado" in (job_to_update.error_message or "")):
+                            job_to_update.status = "failed"
+                            job_to_update.progress = 0
+                            job_to_update.error_message = f"Exceção: {str(e)}\n{error_trace}"
+                            db.commit()
                     db.close()
                 finally:
+                    set_current_job_id(None)
                     from facefusion.logger import set_job_context
                     set_job_context('')
             else:
