@@ -1,7 +1,12 @@
 import subprocess
 from collections import namedtuple
 from threading import Lock
-from typing import Any, Callable, Dict, List, Literal, NotRequired, Optional, Tuple, TypeAlias, TypedDict
+import sys
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
+if sys.version_info >= (3, 11):
+	from typing import NotRequired, TypeAlias, TypedDict
+else:
+	from typing_extensions import NotRequired, TypeAlias, TypedDict
 
 import cv2
 import numpy

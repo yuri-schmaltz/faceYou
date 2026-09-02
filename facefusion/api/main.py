@@ -15,8 +15,8 @@ from facefusion.jobs import job_manager
 
 # Inicializar o state_manager com os argumentos padrão
 program = create_program()
-args = vars(program.parse_args(['run']))
-apply_args(args, state_manager.init_item)
+known_args, _ = program.parse_known_args(['run'])
+apply_args(vars(known_args), state_manager.init_item)
 
 # Inicializar o logger para capturar os logs dos workers e pipeline
 from facefusion import logger

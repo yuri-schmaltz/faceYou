@@ -285,6 +285,47 @@ def list_jobs(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f"Erro ao listar jobs: {str(e)}")
 
 
+@router.get("/jobs/stream")
+async def stream_jobs():
+    """
+    Server-Sent Events (SSE) endpoint que envia atualizações da lista de jobs
+    em tempo real para o cockpit, reduzindo overhead de polling HTTP contínuo.
+    """
+    import asyncio
+    from fastapi.responses import StreamingResponse
+
+    async def event_generator():
+        last_hash = ""
+        while True:
+            try:
+                db = SessionLocal()
+                jobs = db.query(JobModel).order_by(desc(JobModel.created_at)).limit(50).all()
+                data = [
+                    {
+                        "id": j.id,
+                        "status": j.status,
+                        "progress": j.progress,
+                        "step": j.step,
+                        "error_message": j.error_message,
+                        "output_path": j.output_path,
+                        "outputUrl": f"/api/media/output/{os.path.basename(j.output_path)}" if j.output_path and os.path.exists(j.output_path) else None,
+                        "created_at": j.created_at.isoformat() if j.created_at else None,
+                        "updated_at": j.updated_at.isoformat() if j.updated_at else None
+                    }
+                    for j in jobs
+                ]
+                db.close()
+                current_hash = f"{len(data)}:" + ";".join(f"{item['id']}-{item['status']}-{item['progress']}-{item['step']}" for item in data)
+                if current_hash != last_hash:
+                    last_hash = current_hash
+                    yield f"data: {json.dumps(data)}\n\n"
+            except Exception as e:
+                yield f": heartbeat {str(e)}\n\n"
+            await asyncio.sleep(1.0)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 @router.get("/jobs/{job_id}")
 def get_job_status(job_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
@@ -582,47 +623,6 @@ def cancel_job(job_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
         return {"status": "success", "message": f"Sinal de cancelamento enviado para a tarefa {job_id}."}
 
     return {"status": "unknown", "message": f"Status desconhecido da tarefa: {job.status}"}
-
-
-@router.get("/jobs/stream")
-async def stream_jobs():
-    """
-    Server-Sent Events (SSE) endpoint que envia atualizações da lista de jobs
-    em tempo real para o cockpit, reduzindo overhead de polling HTTP contínuo.
-    """
-    import asyncio
-    from fastapi.responses import StreamingResponse
-
-    async def event_generator():
-        last_hash = ""
-        while True:
-            try:
-                db = SessionLocal()
-                jobs = db.query(JobModel).order_by(desc(JobModel.created_at)).limit(50).all()
-                data = [
-                    {
-                        "id": j.id,
-                        "status": j.status,
-                        "progress": j.progress,
-                        "step": j.step,
-                        "error_message": j.error_message,
-                        "output_path": j.output_path,
-                        "outputUrl": f"/api/media/output/{os.path.basename(j.output_path)}" if j.output_path and os.path.exists(j.output_path) else None,
-                        "created_at": j.created_at.isoformat() if j.created_at else None,
-                        "updated_at": j.updated_at.isoformat() if j.updated_at else None
-                    }
-                    for j in jobs
-                ]
-                db.close()
-                current_hash = f"{len(data)}:" + ";".join(f"{item['id']}-{item['status']}-{item['progress']}-{item['step']}" for item in data)
-                if current_hash != last_hash:
-                    last_hash = current_hash
-                    yield f"data: {json.dumps(data)}\n\n"
-            except Exception as e:
-                yield f": heartbeat {str(e)}\n\n"
-            await asyncio.sleep(1.0)
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.post("/media/cleanup")
