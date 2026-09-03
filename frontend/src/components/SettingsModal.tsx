@@ -157,20 +157,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <h2 className="text-lg font-black text-white tracking-tight">Configurações do Sistema</h2>
         </div>
 
-        {/* Ações Rápidas no Header */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              onSaveConfig(e as any);
-            }}
-            disabled={isSavingConfig}
-            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition-all shadow-md shadow-red-600/30 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            {isSavingConfig ? <RefreshCw size={13} className="animate-spin" /> : null}
-            Salvar Configurações
-          </button>
-        </div>
       </div>
 
       {/* Grid Principal de 2 Colunas Otimizado Horizontalmente */}
@@ -476,6 +462,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Botão de Salvar Configurações */}
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                disabled={isSavingConfig}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSavingConfig ? <RefreshCw size={13} className="animate-spin" /> : null}
+                Salvar Configurações
+              </button>
             </div>
           </form>
         </div>
