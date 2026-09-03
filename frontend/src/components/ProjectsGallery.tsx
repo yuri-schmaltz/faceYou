@@ -68,9 +68,9 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in flex-1 overflow-hidden flex flex-col p-6 max-w-7xl mx-auto w-full">
+    <div className="space-y-4 animate-fade-in flex-1 overflow-hidden flex flex-col px-6 py-4 max-w-[1760px] mx-auto w-full select-none">
       {/* Header Superior da Galeria */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-900 pb-3.5 flex-shrink-0">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
             <Folder size={22} />
@@ -130,15 +130,15 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
             className="flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer"
           >
             <Sparkles size={14} />
-            <span>Novo Projeto</span>
+            <span>Criar projeto</span>
           </button>
         </div>
       </div>
 
-      {/* Grid de Cards de Projetos */}
+      {/* Grid de Cards de Projetos: 4 Colunas (lg:grid-cols-4) permitindo ao menos 2 linhas completas visíveis */}
       <div className="flex-1 overflow-y-auto pr-1">
         {filteredProjects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
             {filteredProjects.map((project) => {
               const fullOutputUrl = project.output_url ? formatApiUrl(apiUrl, project.output_url) : null;
               const fullTargetUrl = project.target_url ? formatApiUrl(apiUrl, project.target_url) : null;
@@ -148,9 +148,9 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
               return (
                 <div
                   key={project.id || project.name}
-                  className="bg-zinc-900/50 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:shadow-2xl hover:shadow-black/50 group"
+                  className="bg-zinc-900/50 border border-zinc-800/80 hover:border-zinc-700 rounded-xl overflow-hidden flex flex-col transition-all duration-200 hover:shadow-xl hover:shadow-black/50 group"
                 >
-                  {/* Área de Visualização / Preview de Mídia */}
+                  {/* Área de Visualização / Preview de Mídia (16:9) */}
                   <div className="relative aspect-video bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-zinc-800/60">
                     {fullOutputUrl ? (
                       isVideo ? (
@@ -180,77 +180,75 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
                           alt="Destino"
                           className="w-full h-full object-cover opacity-60 filter blur-sm"
                         />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-center p-4">
-                          <Clock size={28} className="text-amber-400 animate-pulse mb-2" />
-                          <span className="text-xs font-bold text-white">Renderização em Andamento</span>
-                          <span className="text-[10px] text-zinc-400 mt-0.5">Arquivo salvo na conclusão</span>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-center p-3">
+                          <Clock size={24} className="text-amber-400 animate-pulse mb-1.5" />
+                          <span className="text-xs font-bold text-white">Renderização Ativa</span>
+                          <span className="text-[10px] text-zinc-400 mt-0.5">Gravando em output/</span>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center text-zinc-600 gap-2">
-                        <Folder size={32} />
-                        <span className="text-xs font-mono">Pasta sem mídia</span>
+                        <Folder size={28} />
+                        <span className="text-xs font-mono">Sem mídia de saída</span>
                       </div>
                     )}
 
                     {/* Status Badge */}
-                    <div className="absolute top-2.5 right-2.5">
+                    <div className="absolute top-2 right-2">
                       {project.status === "completed" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-md shadow-sm">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-md shadow-sm">
                           <CheckCircle size={10} /> Concluído
                         </span>
                       ) : project.status === "processing" || project.status === "queued" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 backdrop-blur-md shadow-sm animate-pulse">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 backdrop-blur-md shadow-sm animate-pulse">
                           <Clock size={10} /> Em Fila
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 backdrop-blur-md shadow-sm">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 backdrop-blur-md shadow-sm">
                           <AlertCircle size={10} /> Falha
                         </span>
                       )}
                     </div>
 
                     {/* Badge de Miniaturas (Origem / Destino) */}
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 text-[10px] text-zinc-300 font-mono">
-                      <span>{project.source_files?.length || 0} origem</span>
+                    <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 text-[9px] text-zinc-300 font-mono">
+                      <span>{project.source_files?.length || 0} src</span>
                       <span className="text-zinc-500">•</span>
-                      <span>{project.target_files?.length || 0} destino</span>
-                      <span className="text-zinc-500">•</span>
-                      <span>{project.output_files?.length || 0} saída</span>
+                      <span>{project.target_files?.length || 0} tgt</span>
                     </div>
                   </div>
 
                   {/* Detalhes do Projeto */}
-                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                  <div className="p-3 flex-1 flex flex-col justify-between space-y-2.5">
                     <div>
-                      <h3 className="font-bold text-white text-sm tracking-tight truncate" title={project.name}>
+                      <h3 className="font-bold text-white text-xs tracking-tight truncate" title={project.name}>
                         {project.name}
                       </h3>
-                      <p className="text-[11px] text-zinc-500 font-mono mt-0.5 truncate" title={project.project_dir}>
-                        {project.project_dir}
+                      <p className="text-[10px] text-zinc-500 font-mono mt-0.5 truncate" title={project.project_dir}>
+                        {project.project_dir.replace("/home/yuri", "~")}
                       </p>
                     </div>
 
-                    {/* Botões de Ação */}
+                    {/* Botões de Ação Compactos */}
                     <div className="flex items-center gap-1.5 pt-2 border-t border-zinc-800/60">
                       {/* Abrir Pasta no SO */}
                       <button
                         onClick={() => handleOpenFolder(project.name)}
                         disabled={actionLoading === project.name}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-200 text-xs py-2 rounded-xl font-bold transition-all border border-zinc-700/50 cursor-pointer shadow-sm"
-                        title="Abrir pasta deste projeto no explorador de arquivos local"
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-750 text-zinc-200 text-[11px] py-1.5 rounded-lg font-bold transition-all border border-zinc-700/50 cursor-pointer shadow-sm"
+                        title="Abrir pasta no explorador de arquivos local (xdg-open)"
                       >
-                        <FolderOpen size={13} className="text-amber-400" />
+                        <FolderOpen size={12} className="text-amber-400" />
                         <span>Abrir Pasta</span>
                       </button>
 
                       {/* Abrir no Estúdio */}
                       <button
                         onClick={() => onOpenInStudio(project)}
-                        className="flex items-center justify-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-200 text-xs px-2.5 py-2 rounded-xl font-bold transition-all border border-zinc-700/50 cursor-pointer shadow-sm"
+                        className="flex items-center justify-center bg-zinc-800/80 hover:bg-zinc-750 text-zinc-200 text-[11px] px-2 py-1.5 rounded-lg font-bold transition-all border border-zinc-700/50 cursor-pointer shadow-sm"
                         title="Carregar mídias deste projeto no Estúdio"
                       >
-                        <Sparkles size={13} className="text-red-400" />
+                        <Sparkles size={12} className="text-red-400" />
                       </button>
 
                       {/* Download */}
@@ -258,20 +256,20 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
                         <a
                           href={fullOutputUrl}
                           download={`${project.name}-resultado`}
-                          className="bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-200 text-xs p-2 rounded-xl font-bold transition-all border border-zinc-700/50 flex items-center justify-center shadow-sm"
-                          title="Baixar mídia renderizada"
+                          className="bg-zinc-800/80 hover:bg-zinc-750 text-zinc-200 text-[11px] p-1.5 rounded-lg font-bold transition-all border border-zinc-700/50 flex items-center justify-center shadow-sm"
+                          title="Baixar produto final renderizado"
                         >
-                          <Download size={14} className="text-emerald-400" />
+                          <Download size={12} className="text-emerald-400" />
                         </a>
                       )}
 
                       {/* Excluir */}
                       <button
                         onClick={() => setProjectToDelete(project.name)}
-                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs p-2 rounded-xl font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm"
-                        title="Excluir projeto do disco"
+                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-[11px] p-1.5 rounded-lg font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm"
+                        title="Excluir pasta do projeto do disco"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
@@ -291,9 +289,9 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
             </p>
             <button
               onClick={onNavigateToStudio}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer active:scale-95"
             >
-              <Sparkles size={14} /> Ir para o Estúdio e Criar Projeto
+              <Sparkles size={14} /> Criar projeto
             </button>
           </div>
         )}
