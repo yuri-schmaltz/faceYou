@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Upload, X, ScanFace, RefreshCw } from "lucide-react";
+import { Upload, X, ScanFace, RefreshCw, Sparkles } from "lucide-react";
 import { DetectedFace } from "../types";
 
 interface TargetMediaViewerProps {
