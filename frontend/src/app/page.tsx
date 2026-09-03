@@ -230,6 +230,7 @@ export default function Home() {
   const [outputVideoEncoder, setOutputVideoEncoder] = useState<string>("libx264");
   const [outputAudioEncoder, setOutputAudioEncoder] = useState<string>("aac");
   const [outputAudioQuality, setOutputAudioQuality] = useState<number>(80);
+  const [outputAudioVolume, setOutputAudioVolume] = useState<number>(100);
   const [previewOutputUrl, setPreviewOutputUrl] = useState<string | null>(null);
 
   // Assistente de Pré-Análise & Diagnóstico de Vídeo (Wizard)
