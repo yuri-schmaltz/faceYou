@@ -889,10 +889,10 @@ export default function Home() {
                 </div>
               )}
 
-              {/* 3-Column Creative Suite Layout */}
+              {/* 3-Column Creative Suite Layout - Colunas laterais simétricas */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden">
-                {/* COLUNA 1: MÍDIAS DE ENTRADA (25% da tela / col-span-3) */}
-                <div className="lg:col-span-3 flex flex-col gap-3.5 overflow-hidden h-full">
+                {/* COLUNA 1: MÍDIAS DE ENTRADA (Simétrica com Coluna 3) */}
+                <div className="lg:col-span-3 xl:col-span-3 flex flex-col gap-3.5 overflow-hidden h-full">
                   <div className="flex-[0.9] min-h-[170px] overflow-hidden">
                     <SourceUploader
                       sourceItems={sourceItems}
@@ -946,8 +946,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* COLUNA 2: MONITOR CENTRAL DE VISUALIZAÇÃO (42% da tela / col-span-5) */}
-                <div className="lg:col-span-5 flex flex-col overflow-hidden h-full">
+                {/* COLUNA 2: MONITOR CENTRAL DE VISUALIZAÇÃO (Ajustado para balancear as laterais) */}
+                <div className="lg:col-span-6 xl:col-span-6 flex flex-col overflow-hidden h-full">
                   <VideoComparator
                     previewOutputUrl={previewOutputUrl}
                     onDownloadOutput={handleDownloadOutput}
@@ -966,8 +966,8 @@ export default function Home() {
                   />
                 </div>
 
-                {/* COLUNA 3: INSPETOR DE PROCESSADORES & RENDERING (33% da tela / col-span-4) */}
-                <div className="lg:col-span-4 flex flex-col gap-3 overflow-hidden h-full bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-3.5 shadow-xl">
+                {/* COLUNA 3: INSPETOR DE PROCESSADORES & RENDERING (Simétrica com Coluna 1) */}
+                <div className="lg:col-span-3 xl:col-span-3 flex flex-col gap-3 overflow-hidden h-full bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-3.5 shadow-xl">
                   <div className="flex-1 overflow-hidden flex flex-col">
                     <ProcessorSettings
                       availableProcessors={availableProcessors}
