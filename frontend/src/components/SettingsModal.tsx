@@ -147,7 +147,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const isDownloading = modelStatus?.status === "downloading";
 
   return (
-    <div className="max-w-7xl w-full mx-auto space-y-4 animate-fade-in flex-1 overflow-y-auto lg:overflow-hidden flex flex-col p-4 md:p-6 select-none custom-scrollbar">
+    <div className="w-full space-y-4 animate-fade-in flex-1 overflow-y-auto lg:overflow-hidden flex flex-col p-4 md:p-6 select-none custom-scrollbar">
       {/* Header Superior Compacto */}
       <div className="flex items-center justify-between border-b border-zinc-900 pb-3 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -477,18 +477,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Rodapé de Salvamento */}
-            <div className="flex justify-end pt-1">
-              <button
-                type="submit"
-                disabled={isSavingConfig}
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-6 py-2 rounded-lg text-xs transition-all shadow-md shadow-red-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSavingConfig ? <RefreshCw size={13} className="animate-spin" /> : null}
-                SALVAR CONFIGURAÇÕES
-              </button>
             </div>
           </form>
         </div>
