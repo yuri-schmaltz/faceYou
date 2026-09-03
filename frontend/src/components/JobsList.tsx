@@ -74,8 +74,8 @@ export const JobsList: React.FC<JobsListProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in flex-1 overflow-hidden flex flex-col p-6 max-w-7xl mx-auto w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5 flex-shrink-0">
+    <div className="space-y-5 animate-fade-in flex-1 overflow-hidden flex flex-col w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4 flex-shrink-0">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
             <Layers size={22} />
@@ -140,9 +140,9 @@ export const JobsList: React.FC<JobsListProps> = ({
         </div>
       </div>
 
-      {/* Grid de Projetos com rolagem vertical */}
+      {/* Grid de Projetos com rolagem vertical aproveitando toda a largura */}
       <div className="flex-1 overflow-y-auto pr-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-5">
           {filteredJobs.map((job, index) => {
             const statusConfig = getJobStatusConfig(job);
             const isQueued = job.status === "queued" || (job.status === "idle" && job.progress === 0);

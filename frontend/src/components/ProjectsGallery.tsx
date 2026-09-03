@@ -71,9 +71,9 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in flex-1 overflow-hidden flex flex-col p-6 max-w-7xl mx-auto w-full">
+    <div className="space-y-5 animate-fade-in flex-1 overflow-hidden flex flex-col w-full">
       {/* Cabeçalho da Galeria */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4 flex-shrink-0">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
             <Folder size={22} />
@@ -154,10 +154,10 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
         </div>
       </div>
 
-      {/* Grid de Cards de Projetos: 4 Colunas (lg:grid-cols-4) permitindo ao menos 2 linhas completas visíveis */}
+      {/* Grid de Cards de Projetos: Ocupa toda a largura disponível de 1 a 5 colunas */}
       <div className="flex-1 overflow-y-auto pr-1">
         {filteredProjects.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 pb-8">
             {filteredProjects.map((project) => {
               const fullOutputUrl = project.output_url ? formatApiUrl(apiUrl, project.output_url) : null;
               const fullTargetUrl = project.target_url ? formatApiUrl(apiUrl, project.target_url) : null;
