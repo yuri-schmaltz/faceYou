@@ -124,17 +124,34 @@ export default function Home() {
   const [faceMappings, setFaceMappings] = useState<Record<number, string>>({});
   const [referenceFrameNumber, setReferenceFrameNumber] = useState<number>(0);
 
-  // Processadores & Parâmetros
+  // 11 Processadores Oficiais do FaceFusion v3.8.2
   const [availableProcessors, setAvailableProcessors] = useState<string[]>([
     "face_swapper",
     "face_enhancer",
     "frame_enhancer",
     "face_editor",
     "age_modifier",
-    "expression_restorer"
+    "expression_restorer",
+    "deep_swapper",
+    "lip_syncer",
+    "face_debugger",
+    "frame_colorizer",
+    "background_remover"
   ]);
   const [selectedProcessors, setSelectedProcessors] = useState<string[]>(["face_swapper"]);
   const [autoPreview, setAutoPreview] = useState<boolean>(true);
+
+  // Estados dos 5 Processadores Adicionais
+  const [deepSwapperModel, setDeepSwapperModel] = useState<string>("iperov/elon_musk_224");
+  const [deepSwapperMorph, setDeepSwapperMorph] = useState<number>(100);
+  const [lipSyncerModel, setLipSyncerModel] = useState<string>("wav2lip_gan_96");
+  const [lipSyncerWeight, setLipSyncerWeight] = useState<number>(0.8);
+  const [faceDebuggerItems, setFaceDebuggerItems] = useState<string[]>(["bounding-box", "face-landmark-5", "face-mask"]);
+  const [frameColorizerModel, setFrameColorizerModel] = useState<string>("ddcolor");
+  const [frameColorizerBlend, setFrameColorizerBlend] = useState<number>(100);
+  const [frameColorizerSize, setFrameColorizerSize] = useState<string>("512x512");
+  const [backgroundRemoverModel, setBackgroundRemoverModel] = useState<string>("birefnet_general");
+  const [backgroundRemoverColor, setBackgroundRemoverColor] = useState<string>("transparent");
 
   // Swapper options
   const [faceSwapperWeight, setFaceSwapperWeight] = useState<number>(0.85);
@@ -425,6 +442,16 @@ export default function Home() {
           age_modifier_model: ageModifierModel,
           age_modifier_direction: ageModifierDirection,
           expression_restorer_factor: expressionRestorerFactor,
+          deep_swapper_model: deepSwapperModel,
+          deep_swapper_morph: deepSwapperMorph,
+          lip_syncer_model: lipSyncerModel,
+          lip_syncer_weight: lipSyncerWeight,
+          face_debugger_items: faceDebuggerItems,
+          frame_colorizer_model: frameColorizerModel,
+          frame_colorizer_blend: frameColorizerBlend,
+          frame_colorizer_size: frameColorizerSize,
+          background_remover_model: backgroundRemoverModel,
+          background_remover_color: backgroundRemoverColor === "transparent" ? undefined : (backgroundRemoverColor === "black" ? [0, 0, 0] : (backgroundRemoverColor === "white" ? [255, 255, 255] : [0, 255, 0])),
         }),
       });
 
@@ -515,6 +542,16 @@ export default function Home() {
           age_modifier_model: ageModifierModel,
           age_modifier_direction: ageModifierDirection,
           expression_restorer_factor: expressionRestorerFactor,
+          deep_swapper_model: deepSwapperModel,
+          deep_swapper_morph: deepSwapperMorph,
+          lip_syncer_model: lipSyncerModel,
+          lip_syncer_weight: lipSyncerWeight,
+          face_debugger_items: faceDebuggerItems,
+          frame_colorizer_model: frameColorizerModel,
+          frame_colorizer_blend: frameColorizerBlend,
+          frame_colorizer_size: frameColorizerSize,
+          background_remover_model: backgroundRemoverModel,
+          background_remover_color: backgroundRemoverColor === "transparent" ? undefined : (backgroundRemoverColor === "black" ? [0, 0, 0] : (backgroundRemoverColor === "white" ? [255, 255, 255] : [0, 255, 0])),
           output_audio_encoder: outputAudioEncoder === "none" ? undefined : outputAudioEncoder,
           output_audio_quality: outputAudioEncoder === "none" ? undefined : outputAudioQuality,
           output_audio_volume: outputAudioEncoder === "none" ? 0 : outputAudioVolume,
@@ -821,6 +858,26 @@ export default function Home() {
                       setAgeModifierDirection={setAgeModifierDirection}
                       expressionRestorerFactor={expressionRestorerFactor}
                       setExpressionRestorerFactor={setExpressionRestorerFactor}
+                      deepSwapperModel={deepSwapperModel}
+                      setDeepSwapperModel={setDeepSwapperModel}
+                      deepSwapperMorph={deepSwapperMorph}
+                      setDeepSwapperMorph={setDeepSwapperMorph}
+                      lipSyncerModel={lipSyncerModel}
+                      setLipSyncerModel={setLipSyncerModel}
+                      lipSyncerWeight={lipSyncerWeight}
+                      setLipSyncerWeight={setLipSyncerWeight}
+                      faceDebuggerItems={faceDebuggerItems}
+                      setFaceDebuggerItems={setFaceDebuggerItems}
+                      frameColorizerModel={frameColorizerModel}
+                      setFrameColorizerModel={setFrameColorizerModel}
+                      frameColorizerBlend={frameColorizerBlend}
+                      setFrameColorizerBlend={setFrameColorizerBlend}
+                      frameColorizerSize={frameColorizerSize}
+                      setFrameColorizerSize={setFrameColorizerSize}
+                      backgroundRemoverModel={backgroundRemoverModel}
+                      setBackgroundRemoverModel={setBackgroundRemoverModel}
+                      backgroundRemoverColor={backgroundRemoverColor}
+                      setBackgroundRemoverColor={setBackgroundRemoverColor}
                     />
                   </div>
 

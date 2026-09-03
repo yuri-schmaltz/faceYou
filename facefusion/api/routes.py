@@ -107,6 +107,15 @@ class JobCreateRequest(BaseModel):
     lip_syncer_weight: Optional[float] = None
     expression_restorer_model: Optional[str] = None
     expression_restorer_factor: Optional[float] = None
+    # Additional 5 processors
+    deep_swapper_model: Optional[str] = None
+    deep_swapper_morph: Optional[int] = None
+    face_debugger_items: Optional[List[str]] = None
+    frame_colorizer_model: Optional[str] = None
+    frame_colorizer_blend: Optional[int] = None
+    frame_colorizer_size: Optional[str] = None
+    background_remover_model: Optional[str] = None
+    background_remover_color: Optional[List[int]] = None
     output_audio_encoder: Optional[str] = "aac"
     output_audio_quality: Optional[int] = 80
     output_audio_volume: Optional[int] = 100
@@ -642,6 +651,22 @@ def apply_processor_args(step_args: Dict[str, Any], request: JobCreateRequest) -
         step_args["expression_restorer_model"] = request.expression_restorer_model
     if request.expression_restorer_factor is not None:
         step_args["expression_restorer_factor"] = request.expression_restorer_factor
+    if request.deep_swapper_model is not None:
+        step_args["deep_swapper_model"] = request.deep_swapper_model
+    if request.deep_swapper_morph is not None:
+        step_args["deep_swapper_morph"] = request.deep_swapper_morph
+    if request.face_debugger_items is not None:
+        step_args["face_debugger_items"] = request.face_debugger_items
+    if request.frame_colorizer_model is not None:
+        step_args["frame_colorizer_model"] = request.frame_colorizer_model
+    if request.frame_colorizer_blend is not None:
+        step_args["frame_colorizer_blend"] = request.frame_colorizer_blend
+    if request.frame_colorizer_size is not None:
+        step_args["frame_colorizer_size"] = request.frame_colorizer_size
+    if request.background_remover_model is not None:
+        step_args["background_remover_model"] = request.background_remover_model
+    if request.background_remover_color is not None:
+        step_args["background_remover_color"] = request.background_remover_color
     if request.output_audio_encoder is not None:
         step_args["output_audio_encoder"] = request.output_audio_encoder
     if request.output_audio_quality is not None:
@@ -1051,6 +1076,14 @@ class PreviewRequest(BaseModel):
     lip_syncer_weight: Optional[float] = None
     expression_restorer_model: Optional[str] = None
     expression_restorer_factor: Optional[float] = None
+    deep_swapper_model: Optional[str] = None
+    deep_swapper_morph: Optional[int] = None
+    face_debugger_items: Optional[List[str]] = None
+    frame_colorizer_model: Optional[str] = None
+    frame_colorizer_blend: Optional[int] = None
+    frame_colorizer_size: Optional[str] = None
+    background_remover_model: Optional[str] = None
+    background_remover_color: Optional[List[int]] = None
 
 
 @router.post("/preview")
@@ -1160,6 +1193,22 @@ def generate_preview(request: PreviewRequest):
             overrides['expression_restorer_model'] = request.expression_restorer_model
         if request.expression_restorer_factor is not None:
             overrides['expression_restorer_factor'] = request.expression_restorer_factor
+        if request.deep_swapper_model is not None:
+            overrides['deep_swapper_model'] = request.deep_swapper_model
+        if request.deep_swapper_morph is not None:
+            overrides['deep_swapper_morph'] = request.deep_swapper_morph
+        if request.face_debugger_items is not None:
+            overrides['face_debugger_items'] = request.face_debugger_items
+        if request.frame_colorizer_model is not None:
+            overrides['frame_colorizer_model'] = request.frame_colorizer_model
+        if request.frame_colorizer_blend is not None:
+            overrides['frame_colorizer_blend'] = request.frame_colorizer_blend
+        if request.frame_colorizer_size is not None:
+            overrides['frame_colorizer_size'] = request.frame_colorizer_size
+        if request.background_remover_model is not None:
+            overrides['background_remover_model'] = request.background_remover_model
+        if request.background_remover_color is not None:
+            overrides['background_remover_color'] = request.background_remover_color
 
         with sm.temporary_state(overrides):
             processors = request.processors or []
