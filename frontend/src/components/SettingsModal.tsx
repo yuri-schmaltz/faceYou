@@ -352,16 +352,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div className="space-y-2 pt-2">
-            <label className="text-xs text-zinc-400 font-semibold block">Provedores de Execução (Execution Providers)</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-zinc-400 font-semibold block">Provedores de Execução (Execution Providers)</label>
+              <span className="text-[10px] text-zinc-500 font-mono">
+                {availableProviders.includes("cuda") ? "⚡ Aceleração GPU Ativa" : "Modo CPU ativo"}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {availableProviders.map((provider) => {
                 const isChecked = configProviders.includes(provider);
+                const isGpu = provider === "cuda" || provider === "tensorrt";
+
                 return (
                   <label
                     key={provider}
-                    className={`flex items-center gap-2 p-2 rounded border text-xs cursor-pointer select-none transition-all ${
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer select-none transition-all ${
                       isChecked
-                        ? "bg-red-600/10 border-red-500/40 text-white font-bold"
+                        ? isGpu
+                          ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-bold shadow-sm"
+                          : "bg-red-600/10 border-red-500/40 text-white font-bold"
                         : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
@@ -375,9 +384,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           setConfigProviders(configProviders.filter((p) => p !== provider));
                         }
                       }}
-                      className="accent-red-600 w-3.5 h-3.5 rounded"
+                      className="accent-emerald-500 w-3.5 h-3.5 rounded"
                     />
-                    <span className="truncate">{provider}</span>
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate uppercase tracking-wider font-extrabold">{provider}</span>
+                        {provider === "cuda" && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+                            GPU
+                          </span>
+                        )}
+                        {provider === "tensorrt" && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30 font-bold">
+                            TensorCore
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 font-normal">
+                        {provider === "cuda"
+                          ? "NVIDIA CUDA Core"
+                          : provider === "tensorrt"
+                          ? "Motor TensorRT Ultra"
+                          : "Processador Central"}
+                      </span>
+                    </div>
                   </label>
                 );
               })}
