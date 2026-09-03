@@ -217,9 +217,15 @@ export const VideoComparator: React.FC<VideoComparatorProps> = ({
                 onChange={(e) => setOutputFormat(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded-lg appearance-none font-bold text-zinc-200 outline-none cursor-pointer focus:border-red-500"
               >
-                <option value="MP4">MP4</option>
-                <option value="WEBM">WEBM</option>
-                <option value="MKV">MKV</option>
+                <option value="MP4">MP4 (Universal)</option>
+                <option value="MOV">MOV (Apple / ProRes)</option>
+                <option value="MKV">MKV (Matroska)</option>
+                <option value="WEBM">WEBM (VP9 Web)</option>
+                <option value="AVI">AVI (Interleave)</option>
+                <option value="M4V">M4V (Apple)</option>
+                <option value="MPEG">MPEG (MPEG-2)</option>
+                <option value="WMV">WMV (Windows)</option>
+                <option value="MXF">MXF (Broadcast)</option>
               </select>
               <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-zinc-500 pointer-events-none" />
             </div>

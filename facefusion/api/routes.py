@@ -760,7 +760,11 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
         project_target_path = dest_tgt
 
         # Caminho final da renderização na pasta output/
-        output_filename = f"resultado{target_ext}"
+        if is_video(resolved_target_path) and request.output_format:
+            output_ext = f".{request.output_format.lower().lstrip('.')}"
+        else:
+            output_ext = target_ext
+        output_filename = f"resultado{output_ext}"
         output_path = os.path.abspath(os.path.join(output_dir, output_filename))
 
         # Criar project.json de metadados
