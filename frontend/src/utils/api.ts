@@ -4,6 +4,16 @@
  */
 let cachedApiUrl: string | null = null;
 
+export function getInitialApiUrl(): string {
+  if (typeof window === "undefined") {
+    return "http://127.0.0.1:8000";
+  }
+  if (window.location.port === "8000") {
+    return "";
+  }
+  return `${window.location.protocol}//${window.location.hostname}:8000`;
+}
+
 export async function resolveApiUrl(): Promise<string> {
   if (cachedApiUrl !== null) {
     return cachedApiUrl;

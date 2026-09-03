@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
 import { Toast, SourceItem, DetectedFace, Job } from "../types";
-import { resolveApiUrl, formatApiUrl } from "../utils/api";
+import { resolveApiUrl, formatApiUrl, getInitialApiUrl } from "../utils/api";
 import { useJobs } from "../hooks/useJobs";
 import { useHardware } from "../hooks/useHardware";
 import { usePresets } from "../hooks/usePresets";
 import { ToastContainer } from "../components/ToastContainer";
 import { Header } from "../components/Header";
-import { Sidebar } from "../components/Sidebar";
 import { SourceUploader } from "../components/SourceUploader";
 import { TargetMediaViewer } from "../components/TargetMediaViewer";
 import { FaceMappingModal } from "../components/FaceMappingModal";
@@ -20,7 +19,7 @@ import { SettingsModal } from "../components/SettingsModal";
 
 export default function Home() {
   // Configuração e conexão com a API
-  const [apiUrl, setApiUrl] = useState<string>("");
+  const [apiUrl, setApiUrl] = useState<string>(getInitialApiUrl());
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
 
   // Navegação
@@ -627,26 +626,22 @@ export default function Home() {
   const queuedCount = jobs.filter(j => j.status === "processing" || j.status === "queued").length;
 
   return (
-    <div className="flex h-screen bg-[#0a0a0a] text-[#ededed] font-sans overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#0a0a0a] text-[#ededed] font-sans overflow-hidden">
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Sidebar */}
-      <Sidebar
+      {/* Top Header with Centered Tabs */}
+      <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         queuedCount={queuedCount}
+        hardwareInfo={hardwareInfo}
+        isBackendConnected={isBackendConnected}
+        onRefreshHardware={fetchHardware}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <Header
-          title={activeTab === "create_new" ? "Estúdio de Criação" : activeTab === "projects" ? "Galeria de Projetos" : "Configurações"}
-          hardwareInfo={hardwareInfo}
-          isBackendConnected={isBackendConnected}
-          onRefreshHardware={fetchHardware}
-        />
 
         {/* Workspace Body */}
         <div className="flex-1 p-4 md:p-6 flex flex-col overflow-hidden">
