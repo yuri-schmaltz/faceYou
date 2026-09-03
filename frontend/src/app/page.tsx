@@ -695,11 +695,11 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Media Inputs & Controls Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 overflow-hidden">
-                {/* Esquerda: Uploads & Configurações */}
-                <div className="space-y-4 flex flex-col overflow-hidden h-full">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-[1.1] min-h-[160px]">
+              {/* 3-Column Creative Suite Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden">
+                {/* COLUNA 1: MÍDIAS DE ENTRADA (25% da tela / col-span-3) */}
+                <div className="lg:col-span-3 flex flex-col gap-3.5 overflow-hidden h-full">
+                  <div className="flex-[0.9] min-h-[170px] overflow-hidden">
                     <SourceUploader
                       sourceItems={sourceItems}
                       sourceImageFullPath={sourceImageFullPath}
@@ -716,7 +716,9 @@ export default function Home() {
                       onDragLeave={() => setIsDraggingSource(false)}
                       onDrop={handleDropSource}
                     />
+                  </div>
 
+                  <div className="flex-[1.1] min-h-[220px] overflow-hidden">
                     <TargetMediaViewer
                       targetMedia={targetMedia}
                       targetMediaName={targetMediaName}
@@ -746,97 +748,104 @@ export default function Home() {
                       setTargetDimensions={setTargetDimensions}
                     />
                   </div>
+                </div>
 
-                  <ProcessorSettings
-                    availableProcessors={availableProcessors}
-                    selectedProcessors={selectedProcessors}
-                    onToggleProcessor={toggleProcessor}
-                    autoPreview={autoPreview}
-                    setAutoPreview={setAutoPreview}
-                    presets={presets}
-                    selectedPresetName={selectedPresetName}
-                    onApplyPreset={handleApplyPreset}
-                    newPresetName={newPresetName}
-                    setNewPresetName={setNewPresetName}
-                    onSavePreset={handleSaveCurrentPreset}
-                    faceSwapperWeight={faceSwapperWeight}
-                    setFaceSwapperWeight={setFaceSwapperWeight}
-                    faceMaskBlur={faceMaskBlur}
-                    setFaceMaskBlur={setFaceMaskBlur}
-                    detectionThreshold={detectionThreshold}
-                    setDetectionThreshold={setDetectionThreshold}
-                    smoothing={smoothing}
-                    setSmoothing={setSmoothing}
-                    faceSwapperModel={faceSwapperModel}
-                    setFaceSwapperModel={setFaceSwapperModel}
-                    faceSwapperPixelBoost={faceSwapperPixelBoost}
-                    setFaceSwapperPixelBoost={setFaceSwapperPixelBoost}
-                    faceEnhancerModel={faceEnhancerModel}
-                    setFaceEnhancerModel={setFaceEnhancerModel}
-                    faceEnhancerBlend={faceEnhancerBlend}
-                    setFaceEnhancerBlend={setFaceEnhancerBlend}
-                    faceEnhancerWeight={faceEnhancerWeight}
-                    setFaceEnhancerWeight={setFaceEnhancerWeight}
-                    frameEnhancerModel={frameEnhancerModel}
-                    setFrameEnhancerModel={setFrameEnhancerModel}
-                    frameEnhancerBlend={frameEnhancerBlend}
-                    setFrameEnhancerBlend={setFrameEnhancerBlend}
-                    faceEditorModel={faceEditorModel}
-                    setFaceEditorModel={setFaceEditorModel}
-                    faceEditorSmile={faceEditorSmile}
-                    setFaceEditorSmile={setFaceEditorSmile}
-                    ageModifierModel={ageModifierModel}
-                    setAgeModifierModel={setAgeModifierModel}
-                    ageModifierDirection={ageModifierDirection}
-                    setAgeModifierDirection={setAgeModifierDirection}
-                    expressionRestorerFactor={expressionRestorerFactor}
-                    setExpressionRestorerFactor={setExpressionRestorerFactor}
+                {/* COLUNA 2: MONITOR CENTRAL DE VISUALIZAÇÃO (42% da tela / col-span-5) */}
+                <div className="lg:col-span-5 flex flex-col overflow-hidden h-full">
+                  <VideoComparator
+                    previewOutputUrl={previewOutputUrl}
+                    onDownloadOutput={handleDownloadOutput}
+                    outputFormat={outputFormat}
+                    setOutputFormat={setOutputFormat}
+                    outputQuality={outputQuality}
+                    setOutputQuality={setOutputQuality}
                   />
+                </div>
 
-                  {/* Actions Bar */}
-                  <div className="space-y-2 flex-shrink-0 pt-2">
+                {/* COLUNA 3: INSPETOR DE PROCESSADORES & RENDERING (33% da tela / col-span-4) */}
+                <div className="lg:col-span-4 flex flex-col gap-3 overflow-hidden h-full bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-3.5 shadow-xl">
+                  <div className="flex-1 overflow-hidden flex flex-col">
+                    <ProcessorSettings
+                      availableProcessors={availableProcessors}
+                      selectedProcessors={selectedProcessors}
+                      onToggleProcessor={toggleProcessor}
+                      autoPreview={autoPreview}
+                      setAutoPreview={setAutoPreview}
+                      presets={presets}
+                      selectedPresetName={selectedPresetName}
+                      onApplyPreset={handleApplyPreset}
+                      newPresetName={newPresetName}
+                      setNewPresetName={setNewPresetName}
+                      onSavePreset={handleSaveCurrentPreset}
+                      faceSwapperWeight={faceSwapperWeight}
+                      setFaceSwapperWeight={setFaceSwapperWeight}
+                      faceMaskBlur={faceMaskBlur}
+                      setFaceMaskBlur={setFaceMaskBlur}
+                      detectionThreshold={detectionThreshold}
+                      setDetectionThreshold={setDetectionThreshold}
+                      smoothing={smoothing}
+                      setSmoothing={setSmoothing}
+                      faceSwapperModel={faceSwapperModel}
+                      setFaceSwapperModel={setFaceSwapperModel}
+                      faceSwapperPixelBoost={faceSwapperPixelBoost}
+                      setFaceSwapperPixelBoost={setFaceSwapperPixelBoost}
+                      faceEnhancerModel={faceEnhancerModel}
+                      setFaceEnhancerModel={setFaceEnhancerModel}
+                      faceEnhancerBlend={faceEnhancerBlend}
+                      setFaceEnhancerBlend={setFaceEnhancerBlend}
+                      faceEnhancerWeight={faceEnhancerWeight}
+                      setFaceEnhancerWeight={setFaceEnhancerWeight}
+                      frameEnhancerModel={frameEnhancerModel}
+                      setFrameEnhancerModel={setFrameEnhancerModel}
+                      frameEnhancerBlend={frameEnhancerBlend}
+                      setFrameEnhancerBlend={setFrameEnhancerBlend}
+                      faceEditorModel={faceEditorModel}
+                      setFaceEditorModel={setFaceEditorModel}
+                      faceEditorSmile={faceEditorSmile}
+                      setFaceEditorSmile={setFaceEditorSmile}
+                      ageModifierModel={ageModifierModel}
+                      setAgeModifierModel={setAgeModifierModel}
+                      ageModifierDirection={ageModifierDirection}
+                      setAgeModifierDirection={setAgeModifierDirection}
+                      expressionRestorerFactor={expressionRestorerFactor}
+                      setExpressionRestorerFactor={setExpressionRestorerFactor}
+                    />
+                  </div>
+
+                  {/* Base do Inspetor: Nome do Projeto & Disparo */}
+                  <div className="space-y-2 flex-shrink-0 pt-2 border-t border-zinc-900/80">
                     <div className="flex items-center gap-2 bg-zinc-900/90 border border-zinc-800 px-3 py-2 rounded-xl focus-within:border-amber-500/50 transition-all shadow-inner">
                       <Folder size={15} className="text-amber-400 flex-shrink-0" />
                       <input
                         type="text"
-                        placeholder="Nome do Projeto na pasta ~/Vídeos (ex: Comercial_Cena1 - opcional)"
+                        placeholder="Nome do Projeto na pasta ~/Vídeos (opcional)"
                         value={projectName}
                         onChange={(e) => setProjectName(e.target.value)}
                         className="bg-transparent text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none flex-1 font-mono"
                       />
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-2.5">
                       <button
                         onClick={() => handleGeneratePreview(false)}
                         disabled={isPreviewLoading || !sourceImageFullPath || !targetMediaFullPath}
-                        className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-3 rounded-xl text-xs transition-all border border-zinc-800 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 font-bold py-2.5 rounded-xl text-xs transition-all border border-zinc-800 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                       >
                         {isPreviewLoading ? <RefreshCw size={14} className="animate-spin text-amber-500" /> : <Play size={14} />}
-                        GERAR PREVIEW
+                        PREVIEW
                       </button>
 
                       <button
                         onClick={handleGenerateSwap}
                         disabled={isGenerating || !sourceImageFullPath || !targetMediaFullPath}
-                        className="flex-[2] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold py-3 rounded-xl text-xs tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex-[2] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold py-2.5 rounded-xl text-xs tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {isGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                        INICIAR PROCESSAMENTO
+                        INICIAR
                       </button>
                     </div>
                   </div>
                 </div>
-
-                {/* Direita: Preview Comparativo */}
-                <VideoComparator
-                  previewOutputUrl={previewOutputUrl}
-                  onDownloadOutput={handleDownloadOutput}
-                  outputFormat={outputFormat}
-                  setOutputFormat={setOutputFormat}
-                  outputQuality={outputQuality}
-                  setOutputQuality={setOutputQuality}
-                />
               </div>
             </div>
           )}
