@@ -824,38 +824,16 @@ export default function Home() {
                     />
                   </div>
 
-                  {/* Base do Inspetor: Nome do Projeto & Disparo */}
-                  <div className="space-y-2 flex-shrink-0 pt-2 border-t border-zinc-900/80">
-                    <div className="flex items-center gap-2 bg-zinc-900/90 border border-zinc-800 px-3 py-2 rounded-xl focus-within:border-amber-500/50 transition-all shadow-inner">
-                      <Folder size={15} className="text-amber-400 flex-shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Nome do Projeto na pasta ~/Vídeos (opcional)"
-                        value={projectName}
-                        onChange={(e) => setProjectName(e.target.value)}
-                        className="bg-transparent text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none flex-1 font-mono"
-                      />
-                    </div>
-
-                    <div className="flex gap-2.5">
-                      <button
-                        onClick={() => handleGeneratePreview(false)}
-                        disabled={isPreviewLoading || !sourceImageFullPath || !targetMediaFullPath}
-                        className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 font-bold py-2.5 rounded-xl text-xs transition-all border border-zinc-800 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-                      >
-                        {isPreviewLoading ? <RefreshCw size={14} className="animate-spin text-amber-500" /> : <Play size={14} />}
-                        PREVIEW
-                      </button>
-
-                      <button
-                        onClick={handleGenerateSwap}
-                        disabled={isGenerating || !sourceImageFullPath || !targetMediaFullPath}
-                        className="flex-[2] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold py-2.5 rounded-xl text-xs tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {isGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                        INICIAR
-                      </button>
-                    </div>
+                  {/* Base do Inspetor: Disparo de Processamento */}
+                  <div className="pt-2 border-t border-zinc-900/80 flex-shrink-0">
+                    <button
+                      onClick={handleGenerateSwap}
+                      disabled={isGenerating || !sourceImageFullPath || !targetMediaFullPath}
+                      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-black py-3 rounded-xl text-xs tracking-widest uppercase transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
+                    >
+                      {isGenerating ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                      INICIAR PROCESSAMENTO
+                    </button>
                   </div>
                 </div>
               </div>
