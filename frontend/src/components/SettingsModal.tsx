@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Settings, Folder, Cpu, Terminal, Download, RefreshCw, CheckCircle, Trash2, Layers, AlertCircle, XCircle } from "lucide-react";
+import { Settings, Cpu, Terminal, Download, RefreshCw, CheckCircle, Trash2, Layers, AlertCircle, XCircle } from "lucide-react";
 import { formatApiUrl } from "../utils/api";
 
 interface SettingsModalProps {
@@ -160,7 +160,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       </div>
 
       {/* Grid Principal de 2 Colunas Otimizado Horizontalmente */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
+      <form onSubmit={onSaveConfig} className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
         {/* COLUNA ESQUERDA (5 Colunas): Model Manager & Logs */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           {/* SEÇÃO 1: BAIXAR TODOS OS MODELOS DE IA */}
@@ -283,7 +283,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
-          {/* SEÇÃO 2: LOGS & MANUTENÇÃO */}
+          {/* SEÇÃO 2: LOGS, MANUTENÇÃO & DIRETÓRIOS */}
           <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
               <h3 className="text-xs font-bold text-white flex items-center gap-2">
@@ -301,6 +301,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-400 font-semibold">Caminho Temporário (Temp Path)</label>
+                <input
+                  type="text"
+                  value={configTempPath}
+                  onChange={(e) => setConfigTempPath(e.target.value)}
+                  placeholder="Ex: .temp"
+                  className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-400 font-semibold">Pasta de Tarefas (Jobs Path)</label>
+                <input
+                  type="text"
+                  value={configJobsPath}
+                  onChange={(e) => setConfigJobsPath(e.target.value)}
+                  placeholder="Ex: .jobs"
+                  className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors"
+                />
+              </div>
+
               <div className="space-y-1">
                 <label className="text-[11px] text-zinc-400 font-semibold">Nível de Log (Log Level)</label>
                 <select
@@ -331,9 +353,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* COLUNA DIREITA (7 Colunas): Desempenho, Aceleração & Diretórios */}
+        {/* COLUNA DIREITA (7 Colunas): Desempenho & Aceleração */}
         <div className="lg:col-span-7 flex flex-col gap-4">
-          <form onSubmit={onSaveConfig} className="flex-1 flex flex-col gap-4">
+          <div className="flex-1 flex flex-col justify-between gap-4">
             {/* SEÇÃO 3: DESEMPENHO E ACELERAÇÃO (CUDA / TENSORRT) */}
             <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-4 space-y-3.5 flex-1">
               <div className="flex items-center justify-between border-b border-zinc-900 pb-2.5">
@@ -435,35 +457,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
-            {/* SEÇÃO 4: DIRETÓRIOS DO SISTEMA */}
-            <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-4 space-y-3">
-              <h3 className="text-xs font-bold text-white flex items-center gap-2">
-                <Folder size={15} className="text-red-500" /> Diretórios do Sistema
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] text-zinc-400 font-semibold">Caminho Temporário (Temp Path)</label>
-                  <input
-                    type="text"
-                    value={configTempPath}
-                    onChange={(e) => setConfigTempPath(e.target.value)}
-                    placeholder="Ex: .temp"
-                    className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] text-zinc-400 font-semibold">Pasta de Tarefas (Jobs Path)</label>
-                  <input
-                    type="text"
-                    value={configJobsPath}
-                    onChange={(e) => setConfigJobsPath(e.target.value)}
-                    placeholder="Ex: .jobs"
-                    className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-300 outline-none focus:border-red-500 transition-colors"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Botão de Salvar Configurações */}
             <div className="flex justify-end pt-1">
               <button
@@ -475,9 +468,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 Salvar Configurações
               </button>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 };
