@@ -160,14 +160,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Ações Rápidas no Header */}
         <div className="flex items-center gap-2">
           <button
-            type="button"
-            onClick={onExportDiagnostic}
-            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold px-3 py-1.5 rounded-lg text-xs transition-all border border-zinc-800 flex items-center gap-1.5 cursor-pointer shadow-sm"
-          >
-            <Download size={13} />
-            Exportar Diagnóstico (ZIP)
-          </button>
-          <button
             onClick={(e) => {
               e.preventDefault();
               onSaveConfig(e as any);
@@ -307,9 +299,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* SEÇÃO 2: LOGS & MANUTENÇÃO */}
           <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-4 space-y-3">
-            <h3 className="text-xs font-bold text-white flex items-center gap-2">
-              <Terminal size={15} className="text-red-500" /> Logs e Manutenção
-            </h3>
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+              <h3 className="text-xs font-bold text-white flex items-center gap-2">
+                <Terminal size={15} className="text-red-500" /> Logs e Manutenção
+              </h3>
+              <button
+                type="button"
+                onClick={onExportDiagnostic}
+                className="bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Exportar pacote zip com diagnóstico completo de logs e hardware"
+              >
+                <Download size={12} className="text-zinc-400" />
+                Exportar Diagnóstico (ZIP)
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[11px] text-zinc-400 font-semibold">Nível de Log (Log Level)</label>
