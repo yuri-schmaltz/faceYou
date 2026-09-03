@@ -23,7 +23,7 @@ export default function Home() {
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
 
   // Navegação
-  const [activeTab, setActiveTab] = useState<"create_new" | "projects" | "settings">("create_new");
+  const [activeTab, setActiveTab] = useState<"create_new" | "projects" | "settings">("projects");
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -815,6 +815,7 @@ export default function Home() {
                 if (ok) showToast("info", "Cancelamento", `Sinal de cancelamento enviado para ${id}.`);
                 else showToast("error", "Erro", "Não foi possível cancelar.");
               }}
+              onNavigateToStudio={() => setActiveTab("create_new")}
             />
           )}
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FolderOpen, AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle } from "lucide-react";
+import { FolderOpen, AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle, Sparkles } from "lucide-react";
 import { Job } from "../types";
 
 interface JobsListProps {
@@ -7,13 +7,15 @@ interface JobsListProps {
   onLoadToComparator: (job: Job) => void;
   onRequestDelete: (jobId: string) => void;
   onCancelJob: (jobId: string) => void;
+  onNavigateToStudio?: () => void;
 }
 
 export const JobsList: React.FC<JobsListProps> = ({
   jobs,
   onLoadToComparator,
   onRequestDelete,
-  onCancelJob
+  onCancelJob,
+  onNavigateToStudio
 }) => {
   const [projectFilter, setProjectFilter] = useState<"all" | "completed" | "processing" | "failed">("all");
 
@@ -177,8 +179,24 @@ export const JobsList: React.FC<JobsListProps> = ({
         </div>
 
         {filteredJobs.length === 0 && (
-          <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-12 text-center text-zinc-500 max-w-md mx-auto mt-12">
-            Nenhum projeto encontrado para o filtro selecionado.
+          <div className="bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-10 text-center text-zinc-400 max-w-md mx-auto mt-14 shadow-2xl backdrop-blur-md">
+            <div className="w-14 h-14 rounded-2xl bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center mx-auto mb-4 text-zinc-500 shadow-inner">
+              <FolderOpen size={26} className="text-zinc-400" />
+            </div>
+            <h3 className="text-sm font-bold text-white mb-1">Nenhum projeto encontrado</h3>
+            <p className="text-xs text-zinc-500 mb-6 leading-relaxed">
+              {projectFilter === "all"
+                ? "Você ainda não iniciou nenhum processamento. Crie sua primeira manipulação facial no Estúdio."
+                : "Nenhum projeto corresponde ao filtro selecionado."}
+            </p>
+            {onNavigateToStudio && (
+              <button
+                onClick={onNavigateToStudio}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer"
+              >
+                <Sparkles size={14} /> Ir para o Estúdio de Criação
+              </button>
+            )}
           </div>
         )}
       </div>
