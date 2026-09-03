@@ -74,21 +74,11 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
     <div className="space-y-5 animate-fade-in flex-1 overflow-hidden flex flex-col w-full">
       {/* Cabeçalho da Galeria */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4 flex-shrink-0">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
-            <Folder size={22} />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
+            <Folder size={18} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black text-white tracking-tight">Galeria de Projetos</h2>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-850 border border-zinc-750 text-zinc-400">
-                ~/Vídeos/FaceFusion_Projects
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Pastas dedicadas com arquivos de origem, destino e resultados renderizados salvos no seu disco.
-            </p>
-          </div>
+          <h2 className="text-lg font-black text-white tracking-tight">Galeria de Projetos</h2>
         </div>
 
         {/* Filtros e Ações Rápidas */}

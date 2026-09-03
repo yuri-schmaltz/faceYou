@@ -152,14 +152,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="flex items-center justify-between border-b border-zinc-900 pb-3 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-inner">
-            <Settings size={20} />
+            <Settings size={18} />
           </div>
-          <div>
-            <h2 className="text-lg font-black text-white tracking-tight">Configurações do Sistema</h2>
-            <p className="text-xs text-zinc-500">
-              Gerencie aceleração por GPU, diretórios de trabalho, download de modelos e manutenção do disco.
-            </p>
-          </div>
+          <h2 className="text-lg font-black text-white tracking-tight">Configurações do Sistema</h2>
         </div>
 
         {/* Ações Rápidas no Header */}
