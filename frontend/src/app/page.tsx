@@ -51,7 +51,7 @@ export default function Home() {
 
   // Custom Hooks
   const { jobs, activeJob, cancelJob, deleteJob, fetchJobs } = useJobs(apiUrl);
-  const { hardwareInfo, availableProviders, fetchHardware } = useHardware(apiUrl);
+  const { telemetry, hardwareInfo, availableProviders, fetchHardware } = useHardware(apiUrl);
   const {
     presets,
     selectedPresetName,
@@ -635,6 +635,7 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         queuedCount={queuedCount}
+        telemetry={telemetry}
         hardwareInfo={hardwareInfo}
         isBackendConnected={isBackendConnected}
         onRefreshHardware={fetchHardware}

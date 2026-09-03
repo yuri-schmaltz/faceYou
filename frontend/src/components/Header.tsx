@@ -1,11 +1,13 @@
 import React from "react";
-import { Cpu, RefreshCw, Activity, Folder, Sparkles, Settings } from "lucide-react";
+import { Cpu, RefreshCw, Folder, Sparkles, Settings } from "lucide-react";
+import { HardwareTelemetry } from "../types";
 
 interface HeaderProps {
   activeTab: "projects" | "create_new" | "settings";
   setActiveTab: (tab: "projects" | "create_new" | "settings") => void;
   queuedCount?: number;
-  hardwareInfo: string;
+  telemetry?: HardwareTelemetry | null;
+  hardwareInfo?: string;
   isBackendConnected: boolean;
   onRefreshHardware?: () => void;
 }
@@ -14,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   queuedCount = 0,
+  telemetry,
   hardwareInfo,
   isBackendConnected,
   onRefreshHardware,
@@ -97,24 +100,90 @@ export const Header: React.FC<HeaderProps> = ({
       </nav>
 
       {/* 3. Direita: Telemetria de Hardware & Status da Conexão */}
-      <div className="flex-1 flex items-center justify-end gap-3 min-w-0">
-        {/* Chip de Telemetria de GPU / Hardware */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/70 border border-zinc-800/80 text-xs font-medium text-zinc-300 shadow-inner">
-          <Cpu size={14} className="text-red-500 flex-shrink-0" />
-          <span className="max-w-[240px] truncate font-mono text-[11px] text-zinc-300">{hardwareInfo}</span>
-          {onRefreshHardware && (
-            <button
-              onClick={onRefreshHardware}
-              className="text-zinc-500 hover:text-zinc-300 transition-colors ml-0.5 cursor-pointer"
-              title="Atualizar telemetria"
+      <div className="flex-1 flex items-center justify-end gap-2.5 min-w-0">
+        {telemetry ? (
+          <div className="flex items-center gap-2.5 bg-zinc-900/90 border border-zinc-800/90 px-3 py-1.5 rounded-xl shadow-inner font-mono text-[11px]">
+            {/* CPU */}
+            <div
+              className="flex items-center gap-1 text-zinc-300"
+              title={`CPU (${telemetry.cpu.cores || 0} threads lógicas): ${telemetry.cpu.usage_percent}% em uso`}
             >
-              <RefreshCw size={12} />
-            </button>
-          )}
-        </div>
+              <span className="text-[10px] font-bold text-zinc-500">CPU</span>
+              <span className={`font-bold ${telemetry.cpu.usage_percent > 80 ? "text-red-400" : "text-zinc-200"}`}>
+                {telemetry.cpu.usage_percent}%
+              </span>
+            </div>
 
-        {/* Indicador de Status Online / Conexão */}
-        <div className="flex items-center gap-1.5 text-xs text-zinc-400 pl-1">
+            <span className="text-zinc-700">|</span>
+
+            {/* RAM */}
+            <div
+              className="flex items-center gap-1 text-zinc-300"
+              title={`Memória RAM: ${telemetry.ram.used_gb} GB usados de ${telemetry.ram.total_gb} GB (${telemetry.ram.usage_percent}%)`}
+            >
+              <span className="text-[10px] font-bold text-zinc-500">RAM</span>
+              <span className={`font-bold ${telemetry.ram.usage_percent > 85 ? "text-amber-400" : "text-zinc-200"}`}>
+                {telemetry.ram.used_gb}G <span className="text-zinc-500 font-normal">({telemetry.ram.usage_percent}%)</span>
+              </span>
+            </div>
+
+            <span className="text-zinc-700">|</span>
+
+            {/* GPU */}
+            <div
+              className="flex items-center gap-1.5 text-zinc-300"
+              title={`${telemetry.gpu.name}: ${telemetry.gpu.usage_percent ?? 0}% de processamento gráfico ativo`}
+            >
+              <Cpu size={12} className="text-red-500 flex-shrink-0" />
+              <span className="text-[10px] font-bold text-zinc-500">GPU</span>
+              <span className="font-bold text-zinc-200">
+                {telemetry.gpu.usage_percent !== null && telemetry.gpu.usage_percent !== undefined ? `${telemetry.gpu.usage_percent}%` : "0%"}
+              </span>
+              {telemetry.gpu.temperature_c !== null && telemetry.gpu.temperature_c !== undefined && (
+                <span className="text-amber-400 font-bold text-[10px] px-1 py-0.2 bg-amber-500/10 rounded">
+                  {telemetry.gpu.temperature_c}°C
+                </span>
+              )}
+            </div>
+
+            <span className="text-zinc-700">|</span>
+
+            {/* VRAM */}
+            <div
+              className="flex items-center gap-1 text-zinc-300"
+              title={`Memória de Vídeo Dedicada (VRAM): ${telemetry.gpu.vram_used_gb} GB usados de ${telemetry.gpu.vram_total_gb} GB (${telemetry.gpu.vram_usage_percent}%)`}
+            >
+              <span className="text-[10px] font-bold text-zinc-500">VRAM</span>
+              <span className={`font-bold ${telemetry.gpu.vram_usage_percent > 85 ? "text-red-400" : "text-emerald-400"}`}>
+                {telemetry.gpu.vram_used_gb}G
+              </span>
+              <span className="text-zinc-500 font-normal text-[10px]">
+                /{telemetry.gpu.vram_total_gb}G ({telemetry.gpu.vram_usage_percent}%)
+              </span>
+            </div>
+
+            {onRefreshHardware && (
+              <button
+                onClick={onRefreshHardware}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors ml-1 cursor-pointer"
+                title="Atualizar telemetria manualmente"
+              >
+                <RefreshCw size={11} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/70 border border-zinc-800 text-xs font-medium text-zinc-300 shadow-inner">
+            <Cpu size={13} className="text-red-500 flex-shrink-0" />
+            <span className="truncate text-[11px] font-mono">{hardwareInfo || "Buscando telemetria..."}</span>
+          </div>
+        )}
+
+        {/* Indicador de Status da Conexão com o Motor Backend */}
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-400 shadow-inner"
+          title="Status da conexão de rede HTTP/SSE com a API FastAPI do FaceFusion no backend (porta 8000)"
+        >
           <span className="flex h-2 w-2 relative">
             <span
               className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
@@ -127,8 +196,8 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             />
           </span>
-          <span className="font-medium text-[11px] text-zinc-300">
-            {isBackendConnected ? "Online" : "Offline"}
+          <span className="font-bold text-[11px] text-zinc-300 font-mono">
+            Engine: {isBackendConnected ? "Online" : "Offline"}
           </span>
         </div>
       </div>

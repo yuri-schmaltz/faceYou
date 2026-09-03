@@ -66,6 +66,28 @@ export interface HardwareDevice {
   [key: string]: unknown;
 }
 
+export interface HardwareTelemetry {
+  cpu: {
+    usage_percent: number;
+    cores?: number;
+  };
+  ram: {
+    total_gb: number;
+    used_gb: number;
+    free_gb?: number;
+    usage_percent: number;
+  };
+  gpu: {
+    name: string;
+    temperature_c?: number | null;
+    usage_percent?: number | null;
+    vram_total_gb: number;
+    vram_used_gb: number;
+    vram_free_gb?: number;
+    vram_usage_percent: number;
+  };
+}
+
 export interface SystemConfig {
   temp_path?: string;
   jobs_path?: string;
