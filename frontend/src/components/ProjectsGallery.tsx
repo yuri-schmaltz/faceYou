@@ -37,7 +37,7 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
   onRequestNewProject,
   onRefresh,
 }) => {
-  const [filter, setFilter] = useState<"all" | "completed" | "processing" | "failed">("all");
+  const [filter, setFilter] = useState<"all" | "queued" | "processing" | "completed" | "failed">("all");
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -45,7 +45,8 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
     if (filter === "all") return true;
     if (filter === "completed") return p.status === "completed";
     if (filter === "failed") return p.status === "failed";
-    if (filter === "processing") return p.status === "processing" || p.status === "queued";
+    if (filter === "queued") return p.status === "queued" || p.status === "created";
+    if (filter === "processing") return p.status === "processing";
     return true;
   });
 
@@ -70,9 +71,9 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
   };
 
   return (
-    <div className="space-y-4 animate-fade-in flex-1 overflow-hidden flex flex-col px-6 py-4 max-w-[1760px] mx-auto w-full select-none">
-      {/* Header Superior da Galeria */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-900 pb-3.5 flex-shrink-0">
+    <div className="space-y-6 animate-fade-in flex-1 overflow-hidden flex flex-col p-6 max-w-7xl mx-auto w-full">
+      {/* Cabeçalho da Galeria */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5 flex-shrink-0">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
             <Folder size={22} />
@@ -80,7 +81,7 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-white tracking-tight">Galeria de Projetos</h2>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-850 border border-zinc-750 text-zinc-400">
                 ~/Vídeos/FaceFusion_Projects
               </span>
             </div>
@@ -90,9 +91,9 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
           </div>
         </div>
 
-        {/* Ações e Filtros */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1 bg-zinc-900/60 p-1 border border-zinc-800/80 rounded-xl shadow-inner">
+        {/* Filtros e Ações Rápidas */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-zinc-900/60 p-1 border border-zinc-800 rounded-xl">
             <button
               onClick={() => setFilter("all")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -102,20 +103,31 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
               Todos
             </button>
             <button
-              onClick={() => setFilter("completed")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                filter === "completed" ? "bg-red-600 text-white shadow-md shadow-red-600/30" : "text-zinc-400 hover:text-zinc-200"
+              onClick={() => setFilter("queued")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                filter === "queued" ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30" : "text-zinc-400 hover:text-emerald-400"
               }`}
             >
-              Concluídos
+              <span className={`w-1.5 h-1.5 rounded-full ${filter === "queued" ? "bg-white" : "bg-emerald-400"}`} />
+              Aguardando
             </button>
             <button
               onClick={() => setFilter("processing")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                filter === "processing" ? "bg-red-600 text-white shadow-md shadow-red-600/30" : "text-zinc-400 hover:text-zinc-200"
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                filter === "processing" ? "bg-amber-600 text-white shadow-md shadow-amber-600/30" : "text-zinc-400 hover:text-amber-400"
               }`}
             >
-              Ativos
+              <span className={`w-1.5 h-1.5 rounded-full ${filter === "processing" ? "bg-white" : "bg-amber-400 animate-ping"}`} />
+              Processando
+            </button>
+            <button
+              onClick={() => setFilter("completed")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                filter === "completed" ? "bg-cyan-600 text-white shadow-md shadow-cyan-600/30" : "text-zinc-400 hover:text-cyan-400"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${filter === "completed" ? "bg-white" : "bg-cyan-400"}`} />
+              Concluídos
             </button>
           </div>
 
@@ -183,9 +195,19 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
                           className="w-full h-full object-cover opacity-60 filter blur-sm"
                         />
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-center p-3">
-                          <Clock size={24} className="text-amber-400 animate-pulse mb-1.5" />
-                          <span className="text-xs font-bold text-white">Renderização Ativa</span>
-                          <span className="text-[10px] text-zinc-400 mt-0.5">Gravando em output/</span>
+                          {project.status === "queued" || project.status === "created" ? (
+                            <>
+                              <Clock size={24} className="text-emerald-400 mb-1.5" />
+                              <span className="text-xs font-bold text-emerald-300">Aguardando na Fila</span>
+                              <span className="text-[10px] text-zinc-400 mt-0.5">Pronto para processar</span>
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw size={24} className="text-amber-400 animate-spin mb-1.5" />
+                              <span className="text-xs font-bold text-white">Renderização Ativa</span>
+                              <span className="text-[10px] text-zinc-400 mt-0.5">Gravando em output/</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -198,15 +220,19 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
                     {/* Status Badge */}
                     <div className="absolute top-2 right-2">
                       {project.status === "completed" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-md shadow-sm">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 backdrop-blur-md shadow-sm">
                           <CheckCircle size={10} /> Concluído
                         </span>
-                      ) : project.status === "processing" || project.status === "queued" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 backdrop-blur-md shadow-sm animate-pulse">
-                          <Clock size={10} /> Em Fila
+                      ) : project.status === "queued" || project.status === "created" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-md shadow-sm">
+                          <Clock size={10} /> Aguardando
+                        </span>
+                      ) : project.status === "processing" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 backdrop-blur-md shadow-sm animate-pulse">
+                          <RefreshCw size={10} className="animate-spin" /> Processando
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 backdrop-blur-md shadow-sm">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 backdrop-blur-md shadow-sm">
                           <AlertCircle size={10} /> Falha
                         </span>
                       )}

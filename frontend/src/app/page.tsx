@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Sparkles, RefreshCw, AlertCircle, Folder } from "lucide-react";
+import { Play, Sparkles, RefreshCw, AlertCircle, Folder, Clock } from "lucide-react";
 import { Toast, SourceItem, DetectedFace, Job, Project, VideoDiagnosticReport } from "../types";
 import { resolveApiUrl, formatApiUrl, getInitialApiUrl } from "../utils/api";
 import { useJobs } from "../hooks/useJobs";
@@ -845,22 +845,46 @@ export default function Home() {
             <div className="flex-1 flex flex-col overflow-hidden space-y-4 animate-fade-in">
               {/* Active Job Progress Bar */}
               {activeJob && (
-                <div className="flex items-center gap-3 bg-zinc-950/50 border border-zinc-900 rounded-xl px-4 py-2.5 flex-shrink-0 animate-fade-in">
-                  <RefreshCw size={14} className="text-amber-500 animate-spin flex-shrink-0" />
+                <div className={`flex items-center gap-3 bg-zinc-950/50 border rounded-xl px-4 py-2.5 flex-shrink-0 animate-fade-in ${
+                  activeJob.status === "queued" || (activeJob.status === "idle" && activeJob.progress === 0)
+                    ? "border-emerald-500/30 shadow-sm shadow-emerald-950/20"
+                    : "border-zinc-900 shadow-sm shadow-amber-950/20"
+                }`}>
+                  {activeJob.status === "queued" || (activeJob.status === "idle" && activeJob.progress === 0) ? (
+                    <Clock size={15} className="text-emerald-400 flex-shrink-0" />
+                  ) : (
+                    <RefreshCw size={15} className="text-amber-500 animate-spin flex-shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-bold text-zinc-300 truncate">{activeJob.id}</span>
-                      <span className="text-xs font-mono text-amber-500 font-bold">{activeJob.progress}%</span>
+                      <span className={`text-xs font-mono font-bold ${
+                        activeJob.status === "queued" || (activeJob.status === "idle" && activeJob.progress === 0)
+                          ? "text-emerald-400"
+                          : "text-amber-500"
+                      }`}>
+                        {activeJob.progress}%
+                      </span>
                     </div>
                     <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full transition-all duration-700 ease-out"
-                        style={{ width: `${activeJob.progress}%` }}
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${
+                          activeJob.status === "queued" || (activeJob.status === "idle" && activeJob.progress === 0)
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+                            : "bg-gradient-to-r from-amber-500 to-red-500"
+                        }`}
+                        style={{ width: `${Math.max(activeJob.progress, 4)}%` }}
                       />
                     </div>
                   </div>
-                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full flex-shrink-0 animate-pulse">
-                    {activeJob.status === "processing" ? (activeJob.step || "Processando") : "Na Fila"}
+                  <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full flex-shrink-0 border ${
+                    activeJob.status === "queued" || (activeJob.status === "idle" && activeJob.progress === 0)
+                      ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30"
+                      : "text-amber-400 bg-amber-500/15 border-amber-500/30 animate-pulse"
+                  }`}>
+                    {activeJob.status === "queued" || (activeJob.status === "idle" && activeJob.progress === 0)
+                      ? "Aguardando"
+                      : (activeJob.step || "Processando")}
                   </span>
                 </div>
               )}

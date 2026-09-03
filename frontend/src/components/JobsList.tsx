@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FolderOpen, AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle, Sparkles, Layers } from "lucide-react";
+import { FolderOpen, AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle, Sparkles, Layers, Clock, CheckCircle2 } from "lucide-react";
 import { Job } from "../types";
 
 interface JobsListProps {
@@ -17,15 +17,61 @@ export const JobsList: React.FC<JobsListProps> = ({
   onCancelJob,
   onNavigateToStudio
 }) => {
-  const [projectFilter, setProjectFilter] = useState<"all" | "completed" | "processing" | "failed">("all");
+  const [projectFilter, setProjectFilter] = useState<"all" | "queued" | "processing" | "completed" | "failed">("all");
 
   const filteredJobs = jobs.filter((job) => {
     if (projectFilter === "all") return true;
     if (projectFilter === "completed") return job.status === "completed";
     if (projectFilter === "failed") return job.status === "failed";
-    if (projectFilter === "processing") return job.status === "processing" || job.status === "queued";
+    if (projectFilter === "queued") return job.status === "queued" || (job.status === "idle" && job.progress === 0);
+    if (projectFilter === "processing") return job.status === "processing";
     return true;
   });
+
+  const getJobStatusConfig = (job: Job) => {
+    if (job.status === "completed") {
+      return {
+        label: "CONCLUÍDO",
+        badgeClass: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+        borderClass: "hover:border-cyan-500/40",
+        icon: CheckCircle2,
+        iconClass: "text-cyan-400",
+        stepText: "Concluído com Sucesso",
+        stepColor: "text-cyan-400"
+      };
+    }
+    if (job.status === "failed") {
+      return {
+        label: "FALHOU",
+        badgeClass: "bg-red-500/15 text-red-400 border-red-500/30",
+        borderClass: "hover:border-red-500/40 border-red-500/20",
+        icon: AlertCircle,
+        iconClass: "text-red-500",
+        stepText: "Falha no Processamento",
+        stepColor: "text-red-400"
+      };
+    }
+    if (job.status === "queued" || (job.status === "idle" && job.progress === 0)) {
+      return {
+        label: "AGUARDANDO",
+        badgeClass: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+        borderClass: "hover:border-emerald-500/40 border-emerald-500/20",
+        icon: Clock,
+        iconClass: "text-emerald-400",
+        stepText: "Aguardando na Fila",
+        stepColor: "text-emerald-400"
+      };
+    }
+    return {
+      label: "PROCESSANDO",
+      badgeClass: "bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse",
+      borderClass: "hover:border-amber-500/40 border-amber-500/20",
+      icon: RefreshCw,
+      iconClass: "text-amber-500 animate-spin",
+      stepText: job.step || "Processando",
+      stepColor: "text-amber-400"
+    };
+  };
 
   return (
     <div className="space-y-6 animate-fade-in flex-1 overflow-hidden flex flex-col p-6 max-w-7xl mx-auto w-full">
@@ -41,37 +87,49 @@ export const JobsList: React.FC<JobsListProps> = ({
         </div>
 
         {/* Filtros */}
-        <div className="flex items-center gap-2 bg-zinc-900/50 p-1 border border-zinc-800 rounded-lg">
+        <div className="flex items-center gap-1.5 bg-zinc-900/50 p-1 border border-zinc-800 rounded-lg">
           <button
             onClick={() => setProjectFilter("all")}
             className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
-              projectFilter === "all" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+              projectFilter === "all" ? "bg-red-600 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             Todos
           </button>
           <button
-            onClick={() => setProjectFilter("completed")}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
-              projectFilter === "completed" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+            onClick={() => setProjectFilter("queued")}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              projectFilter === "queued" ? "bg-emerald-600 text-white shadow-sm" : "text-zinc-400 hover:text-emerald-400"
             }`}
           >
-            Concluídos
+            <span className={`w-2 h-2 rounded-full ${projectFilter === "queued" ? "bg-white" : "bg-emerald-400"}`} />
+            Aguardando
           </button>
           <button
             onClick={() => setProjectFilter("processing")}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
-              projectFilter === "processing" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              projectFilter === "processing" ? "bg-amber-600 text-white shadow-sm" : "text-zinc-400 hover:text-amber-400"
             }`}
           >
-            Ativos
+            <span className={`w-2 h-2 rounded-full ${projectFilter === "processing" ? "bg-white" : "bg-amber-400 animate-ping"}`} />
+            Processando
+          </button>
+          <button
+            onClick={() => setProjectFilter("completed")}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              projectFilter === "completed" ? "bg-cyan-600 text-white shadow-sm" : "text-zinc-400 hover:text-cyan-400"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${projectFilter === "completed" ? "bg-white" : "bg-cyan-400"}`} />
+            Concluídos
           </button>
           <button
             onClick={() => setProjectFilter("failed")}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
-              projectFilter === "failed" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              projectFilter === "failed" ? "bg-red-600 text-white shadow-sm" : "text-zinc-400 hover:text-red-400"
             }`}
           >
+            <span className={`w-2 h-2 rounded-full ${projectFilter === "failed" ? "bg-white" : "bg-red-400"}`} />
             Falhas
           </button>
         </div>
@@ -80,60 +138,72 @@ export const JobsList: React.FC<JobsListProps> = ({
       {/* Grid de Projetos com rolagem vertical */}
       <div className="flex-1 overflow-y-auto pr-2">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredJobs.map((job, index) => (
-            <div
-              key={job.id}
-              className="bg-zinc-950/40 border border-zinc-900 rounded-xl overflow-hidden flex flex-col justify-between group hover:border-zinc-700 transition-all duration-200"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              {/* Preview Media */}
-              <div className="aspect-[16/10] bg-zinc-900/60 flex items-center justify-center border-b border-zinc-900 relative">
-                {job.status === "completed" && job.outputUrl ? (
-                  job.outputUrl.match(/\.(mp4|webm|mkv|avi|mov)/i) ? (
-                    <video src={job.outputUrl} className="w-full h-full object-cover" muted loop autoPlay />
-                  ) : (
-                    <img src={job.outputUrl} alt="Output" className="w-full h-full object-cover" />
-                  )
-                ) : job.status === "failed" ? (
-                  <div className="flex flex-col items-center gap-2 p-4 text-center">
-                    <AlertCircle size={32} className="text-red-500" />
-                    <span className="text-xs font-bold text-zinc-400">Falha no Processamento</span>
-                    <div className="max-h-[80px] overflow-y-auto text-[10px] text-zinc-600 bg-black/40 p-2 rounded max-w-[200px] break-all border border-zinc-900 font-mono">
-                      {job.error_message || "Erro desconhecido durante execução."}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-zinc-500 w-full p-4">
-                    <RefreshCw size={32} className="animate-spin text-amber-500" />
-                    <span className="text-xs font-bold text-center px-4 max-w-full truncate text-zinc-300">
-                      {job.step || "Processando"} ({job.progress}%)
-                    </span>
-                    <button
-                      onClick={() => onCancelJob(job.id)}
-                      className="mt-2 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-2.5 py-1 rounded flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      <XCircle size={12} /> Cancelar Tarefa
-                    </button>
-                  </div>
-                )}
+          {filteredJobs.map((job, index) => {
+            const statusConfig = getJobStatusConfig(job);
+            const isQueued = job.status === "queued" || (job.status === "idle" && job.progress === 0);
 
-                {/* Status Overlay Badge */}
-                <div className="absolute top-3 right-3">
-                  {job.status === "completed" ? (
-                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-extrabold uppercase">
-                      Concluído
-                    </span>
+            return (
+              <div
+                key={job.id}
+                className={`bg-zinc-950/40 border border-zinc-900 rounded-xl overflow-hidden flex flex-col justify-between group transition-all duration-200 ${statusConfig.borderClass}`}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {/* Preview Media */}
+                <div className="aspect-[16/10] bg-zinc-900/60 flex items-center justify-center border-b border-zinc-900 relative">
+                  {job.status === "completed" && job.outputUrl ? (
+                    job.outputUrl.match(/\.(mp4|webm|mkv|avi|mov)/i) ? (
+                      <video src={job.outputUrl} className="w-full h-full object-cover" muted loop autoPlay />
+                    ) : (
+                      <img src={job.outputUrl} alt="Output" className="w-full h-full object-cover" />
+                    )
                   ) : job.status === "failed" ? (
-                    <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-extrabold uppercase">
-                      Falhou
-                    </span>
+                    <div className="flex flex-col items-center gap-2 p-4 text-center">
+                      <AlertCircle size={32} className="text-red-500" />
+                      <span className="text-xs font-bold text-zinc-400">Falha no Processamento</span>
+                      <div className="max-h-[80px] overflow-y-auto text-[10px] text-zinc-600 bg-black/40 p-2 rounded max-w-[200px] break-all border border-zinc-900 font-mono">
+                        {job.error_message || "Erro desconhecido durante execução."}
+                      </div>
+                    </div>
+                  ) : isQueued ? (
+                    <div className="flex flex-col items-center gap-2 text-zinc-500 w-full p-4">
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <Clock size={24} />
+                      </div>
+                      <span className="text-xs font-bold text-center px-4 max-w-full truncate text-emerald-400">
+                        Aguardando na Fila (0%)
+                      </span>
+                      <span className="text-[10px] text-zinc-500 text-center">
+                        Aguardando término da tarefa anterior
+                      </span>
+                      <button
+                        onClick={() => onCancelJob(job.id)}
+                        className="mt-1 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-2.5 py-1 rounded flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <XCircle size={12} /> Cancelar Tarefa
+                      </button>
+                    </div>
                   ) : (
-                    <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-extrabold uppercase animate-pulse">
-                      Ativo
-                    </span>
+                    <div className="flex flex-col items-center gap-2 text-zinc-500 w-full p-4">
+                      <RefreshCw size={32} className="animate-spin text-amber-500" />
+                      <span className="text-xs font-bold text-center px-4 max-w-full truncate text-zinc-200">
+                        {job.step || "Processando"} ({job.progress}%)
+                      </span>
+                      <button
+                        onClick={() => onCancelJob(job.id)}
+                        className="mt-2 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-2.5 py-1 rounded flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <XCircle size={12} /> Cancelar Tarefa
+                      </button>
+                    </div>
                   )}
+
+                  {/* Status Overlay Badge */}
+                  <div className="absolute top-3 right-3">
+                    <span className={`text-[10px] px-2.5 py-0.5 rounded font-extrabold uppercase tracking-wider border shadow-sm ${statusConfig.badgeClass}`}>
+                      {statusConfig.label}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
               {/* Card Details */}
               <div className="p-5 space-y-4">
@@ -183,7 +253,8 @@ export const JobsList: React.FC<JobsListProps> = ({
                 </div>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
 
         {filteredJobs.length === 0 && (
