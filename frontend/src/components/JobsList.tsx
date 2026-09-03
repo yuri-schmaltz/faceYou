@@ -111,7 +111,12 @@ export const JobsList: React.FC<JobsListProps> = ({
               projectFilter === "processing" ? "bg-amber-600 text-white shadow-sm" : "text-zinc-400 hover:text-amber-400"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${projectFilter === "processing" ? "bg-white" : "bg-amber-400 animate-ping"}`} />
+            <span className="relative flex h-2 w-2">
+              {jobs.some(j => j.status === "processing") && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${projectFilter === "processing" ? "bg-white" : "bg-amber-400"}`} />
+            </span>
             Processando
           </button>
           <button
