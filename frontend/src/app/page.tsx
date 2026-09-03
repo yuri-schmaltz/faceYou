@@ -18,6 +18,7 @@ import { VideoComparator } from "../components/VideoComparator";
 import { ProjectsGallery } from "../components/ProjectsGallery";
 import { JobsList } from "../components/JobsList";
 import { SettingsModal } from "../components/SettingsModal";
+import { NewProjectModal } from "../components/NewProjectModal";
 import { StatusBar } from "../components/StatusBar";
 
 export default function Home() {
@@ -28,6 +29,7 @@ export default function Home() {
   // Navegação
   const [activeTab, setActiveTab] = useState<"projects" | "create_new" | "jobs" | "settings">("projects");
   const [projectName, setProjectName] = useState<string>("");
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState<boolean>(false);
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -55,8 +57,45 @@ export default function Home() {
 
   // Custom Hooks
   const { jobs, activeJob, cancelJob, deleteJob, fetchJobs } = useJobs(apiUrl);
-  const { projects, fetchProjects, openProjectFolder, deleteProject } = useProjects(apiUrl);
+  const { projects, fetchProjects, openProjectFolder, deleteProject, createProject } = useProjects(apiUrl);
   const { telemetry, hardwareInfo, availableProviders, fetchHardware } = useHardware(apiUrl);
+
+  const handleCreateNewProject = async (projectData: {
+    name: string;
+    description: string;
+    output_format: string;
+    output_video_encoder: string;
+    output_video_quality: string;
+    output_audio_encoder: string;
+    output_audio_quality: number;
+    output_audio_volume: number;
+    processors: string[];
+  }) => {
+    const newProj = await createProject(projectData);
+    if (newProj) {
+      setProjectName(newProj.name);
+      setOutputFormat(newProj.output_format ? newProj.output_format.toUpperCase() : "MP4");
+      if (newProj.output_video_encoder) setOutputVideoEncoder(newProj.output_video_encoder);
+      if (newProj.output_video_quality) setOutputQuality(newProj.output_video_quality);
+      if (newProj.output_audio_encoder) setOutputAudioEncoder(newProj.output_audio_encoder);
+      if (newProj.output_audio_quality) setOutputAudioQuality(newProj.output_audio_quality);
+      if (newProj.output_audio_volume !== undefined) setOutputAudioVolume(newProj.output_audio_volume);
+      if (newProj.processors && newProj.processors.length > 0) setSelectedProcessors(newProj.processors);
+
+      // Limpa mídias anteriores para novo início
+      setSourceItems([]);
+      setSourceImageFullPath(null);
+      setTargetMedia(null);
+      setTargetMediaFullPath(null);
+      setPreviewOutputUrl(null);
+
+      showToast("success", "Projeto Criado", `Projeto "${newProj.name}" criado com sucesso em ~/Vídeos. Abrindo Estúdio...`);
+      setActiveTab("create_new");
+    } else {
+      showToast("error", "Erro", "Não foi possível criar a pasta do projeto.");
+      throw new Error("Falha ao criar o projeto.");
+    }
+  };
 
   const handleOpenProjectInStudio = (proj: Project) => {
     if (proj.source_url) {
@@ -923,7 +962,7 @@ export default function Home() {
                 return ok;
               }}
               onOpenInStudio={handleOpenProjectInStudio}
-              onNavigateToStudio={() => setActiveTab("create_new")}
+              onRequestNewProject={() => setIsNewProjectModalOpen(true)}
               onRefresh={fetchProjects}
             />
           )}
@@ -1018,6 +1057,14 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Modal de Criação de Novo Projeto */}
+      <NewProjectModal
+        isOpen={isNewProjectModalOpen}
+        onClose={() => setIsNewProjectModalOpen(false)}
+        onCreateProject={handleCreateNewProject}
+        availableProcessors={availableProcessors}
+      />
 
       {/* Bottom Status Bar */}
       <StatusBar

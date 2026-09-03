@@ -52,11 +52,33 @@ export function useProjects(apiUrl: string) {
     [apiUrl]
   );
 
+  const createProject = useCallback(
+    async (projectData: Partial<Project>): Promise<Project | null> => {
+      try {
+        const url = formatApiUrl(apiUrl, "/api/projects");
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(projectData),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          await fetchProjects();
+          return data.project;
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    },
+    [apiUrl, fetchProjects]
+  );
+
   useEffect(() => {
     fetchProjects();
     const interval = setInterval(fetchProjects, 5000);
     return () => clearInterval(interval);
   }, [fetchProjects]);
 
-  return { projects, isLoading, fetchProjects, openProjectFolder, deleteProject };
+  return { projects, isLoading, fetchProjects, openProjectFolder, deleteProject, createProject };
 }

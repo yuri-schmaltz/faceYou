@@ -22,7 +22,8 @@ interface ProjectsGalleryProps {
   onOpenFolder: (projectName: string) => Promise<boolean>;
   onDeleteProject: (projectName: string) => Promise<boolean>;
   onOpenInStudio: (project: Project) => void;
-  onNavigateToStudio: () => void;
+  onNavigateToStudio?: () => void;
+  onRequestNewProject?: () => void;
   onRefresh: () => void;
 }
 
@@ -33,6 +34,7 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
   onDeleteProject,
   onOpenInStudio,
   onNavigateToStudio,
+  onRequestNewProject,
   onRefresh,
 }) => {
   const [filter, setFilter] = useState<"all" | "completed" | "processing" | "failed">("all");
@@ -126,7 +128,7 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
           </button>
 
           <button
-            onClick={onNavigateToStudio}
+            onClick={onRequestNewProject || onNavigateToStudio}
             className="flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer"
           >
             <Sparkles size={14} />
@@ -288,7 +290,7 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
               <span className="font-mono text-zinc-400">~/Vídeos/FaceFusion_Projects/</span> com as mídias de origem, destino e o produto final perfeitamente isolados.
             </p>
             <button
-              onClick={onNavigateToStudio}
+              onClick={onRequestNewProject || onNavigateToStudio}
               className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer active:scale-95"
             >
               <Sparkles size={14} /> Criar projeto

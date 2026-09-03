@@ -25,9 +25,10 @@ export interface Job {
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   project_dir: string;
   created_at: string;
-  status: "queued" | "processing" | "completed" | "failed" | "idle";
+  status: "queued" | "processing" | "completed" | "failed" | "idle" | "created";
   source_files: string[];
   target_files: string[];
   output_files: string[];
@@ -35,6 +36,12 @@ export interface Project {
   target_url?: string | null;
   output_url?: string | null;
   processors?: string[];
+  output_format?: string;
+  output_video_encoder?: string;
+  output_video_quality?: string;
+  output_audio_encoder?: string;
+  output_audio_quality?: number;
+  output_audio_volume?: number;
 }
 
 export interface Preset {

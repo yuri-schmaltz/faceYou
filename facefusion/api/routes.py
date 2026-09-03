@@ -545,6 +545,84 @@ def list_projects() -> List[Dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f"Erro ao listar projetos: {str(e)}")
 
 
+class ProjectCreateInput(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    output_format: Optional[str] = "mp4"
+    output_video_encoder: Optional[str] = "libx264"
+    output_video_quality: Optional[str] = "High"
+    output_audio_encoder: Optional[str] = "aac"
+    output_audio_quality: Optional[int] = 80
+    output_audio_volume: Optional[int] = 100
+    processors: Optional[List[str]] = ["face_swapper"]
+
+
+@router.post("/projects")
+def create_project_endpoint(request: ProjectCreateInput) -> Dict[str, Any]:
+    """
+    Cria uma nova estrutura de projeto com subpastas e grava as configurações em project.json em ~/Vídeos/FaceFusion_Projects/.
+    """
+    try:
+        projects_dir = get_user_projects_dir()
+        raw_name = request.name.strip()
+        if not raw_name:
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+            raw_name = f"Projeto_{now_str}"
+        
+        safe_name = "".join(c if c.isalnum() or c in ("-", "_", " ") else "_" for c in raw_name).strip()
+        safe_name = safe_name.replace(" ", "_")
+        
+        proj_dir = os.path.join(projects_dir, safe_name)
+        if os.path.exists(proj_dir):
+            now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_name = f"{safe_name}_{now_str}"
+            proj_dir = os.path.join(projects_dir, safe_name)
+            
+        source_dir = os.path.join(proj_dir, "source")
+        target_dir = os.path.join(proj_dir, "target")
+        output_dir = os.path.join(proj_dir, "output")
+        
+        os.makedirs(source_dir, exist_ok=True)
+        os.makedirs(target_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        meta = {
+            "id": f"proj-{uuid.uuid4().hex[:8]}",
+            "name": safe_name,
+            "description": request.description or "",
+            "created_at": datetime.datetime.now().isoformat(),
+            "status": "created",
+            "processors": request.processors or ["face_swapper"],
+            "output_format": request.output_format or "mp4",
+            "output_video_encoder": request.output_video_encoder or "libx264",
+            "output_video_quality": request.output_video_quality or "High",
+            "output_audio_encoder": request.output_audio_encoder or "aac",
+            "output_audio_quality": request.output_audio_quality or 80,
+            "output_audio_volume": request.output_audio_volume or 100,
+            "source_files": [],
+            "target_files": [],
+            "output_files": []
+        }
+        
+        with open(os.path.join(proj_dir, "project.json"), "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2, ensure_ascii=False)
+            
+        return {
+            "status": "success",
+            "project": {
+                **meta,
+                "project_dir": proj_dir,
+                "source_url": None,
+                "target_url": None,
+                "output_url": None
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar projeto: {str(e)}")
+
+
+
+
 @router.get("/projects/media/{project_name}/{folder}/{filename:path}")
 def get_project_media(project_name: str, folder: str, filename: str):
     """
