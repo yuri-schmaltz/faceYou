@@ -18,6 +18,7 @@ import { VideoComparator } from "../components/VideoComparator";
 import { ProjectsGallery } from "../components/ProjectsGallery";
 import { JobsList } from "../components/JobsList";
 import { SettingsModal } from "../components/SettingsModal";
+import { StatusBar } from "../components/StatusBar";
 
 export default function Home() {
   // Configuração e conexão com a API
@@ -662,10 +663,6 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         queuedCount={queuedCount}
-        telemetry={telemetry}
-        hardwareInfo={hardwareInfo}
-        isBackendConnected={isBackendConnected}
-        onRefreshHardware={fetchHardware}
       />
 
       {/* Main Content Area */}
@@ -961,6 +958,14 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Bottom Status Bar */}
+      <StatusBar
+        telemetry={telemetry}
+        hardwareInfo={hardwareInfo}
+        isBackendConnected={isBackendConnected}
+        onRefreshHardware={fetchHardware}
+      />
     </div>
   );
 }
