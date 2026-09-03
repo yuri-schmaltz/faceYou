@@ -178,6 +178,7 @@ export default function Home() {
   // Export options
   const [outputFormat, setOutputFormat] = useState<string>("MP4");
   const [outputQuality, setOutputQuality] = useState<string>("High");
+  const [outputVideoEncoder, setOutputVideoEncoder] = useState<string>("libx264");
   const [outputAudioEncoder, setOutputAudioEncoder] = useState<string>("aac");
   const [outputAudioQuality, setOutputAudioQuality] = useState<number>(80);
   const [outputAudioVolume, setOutputAudioVolume] = useState<number>(100);
@@ -529,6 +530,7 @@ export default function Home() {
           smoothing: smoothing,
           processors: selectedProcessors,
           output_format: outputFormat.toLowerCase(),
+          output_video_encoder: outputVideoEncoder,
           trim_frame_start: trimFrameStart,
           face_swapper_model: faceSwapperModel,
           face_swapper_pixel_boost: faceSwapperPixelBoost,
@@ -802,6 +804,8 @@ export default function Home() {
                     setOutputFormat={setOutputFormat}
                     outputQuality={outputQuality}
                     setOutputQuality={setOutputQuality}
+                    outputVideoEncoder={outputVideoEncoder}
+                    setOutputVideoEncoder={setOutputVideoEncoder}
                     outputAudioEncoder={outputAudioEncoder}
                     setOutputAudioEncoder={setOutputAudioEncoder}
                     outputAudioQuality={outputAudioQuality}

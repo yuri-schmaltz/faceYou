@@ -119,6 +119,8 @@ class JobCreateRequest(BaseModel):
     output_audio_encoder: Optional[str] = "aac"
     output_audio_quality: Optional[int] = 80
     output_audio_volume: Optional[int] = 100
+    output_video_encoder: Optional[str] = "libx264"
+    output_video_preset: Optional[str] = "medium"
     mappings: Optional[List[FaceMapping]] = None
 
 
@@ -673,6 +675,10 @@ def apply_processor_args(step_args: Dict[str, Any], request: JobCreateRequest) -
         step_args["output_audio_quality"] = request.output_audio_quality
     if request.output_audio_volume is not None:
         step_args["output_audio_volume"] = request.output_audio_volume
+    if request.output_video_encoder is not None:
+        step_args["output_video_encoder"] = request.output_video_encoder
+    if request.output_video_preset is not None:
+        step_args["output_video_preset"] = request.output_video_preset
 
 
 @router.post("/jobs")
@@ -772,7 +778,9 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
             "output_format": request.output_format,
             "output_audio_encoder": request.output_audio_encoder,
             "output_audio_quality": request.output_audio_quality,
-            "output_audio_volume": request.output_audio_volume
+            "output_audio_volume": request.output_audio_volume,
+            "output_video_encoder": request.output_video_encoder,
+            "output_video_preset": request.output_video_preset
         }
         with open(os.path.join(proj_dir, "project.json"), "w", encoding="utf-8") as pf:
             json.dump(project_meta, pf, indent=2, ensure_ascii=False)

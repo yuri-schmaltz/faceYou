@@ -8,6 +8,9 @@ interface VideoComparatorProps {
   setOutputFormat: (fmt: string) => void;
   outputQuality: string;
   setOutputQuality: (q: string) => void;
+  // Opções de Vídeo (Encoder / Codec)
+  outputVideoEncoder?: string;
+  setOutputVideoEncoder?: (enc: string) => void;
   // Opções de Áudio
   outputAudioEncoder?: string;
   setOutputAudioEncoder?: (enc: string) => void;
@@ -24,6 +27,8 @@ export const VideoComparator: React.FC<VideoComparatorProps> = ({
   setOutputFormat,
   outputQuality,
   setOutputQuality,
+  outputVideoEncoder = "libx264",
+  setOutputVideoEncoder,
   outputAudioEncoder = "aac",
   setOutputAudioEncoder,
   outputAudioQuality = 80,
@@ -112,9 +117,6 @@ export const VideoComparator: React.FC<VideoComparatorProps> = ({
                 Baixar
               </button>
             )}
-            <span className="text-[10px] bg-red-600/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded font-bold font-mono">
-              1080p
-            </span>
           </div>
         </div>
 
@@ -149,7 +151,7 @@ export const VideoComparator: React.FC<VideoComparatorProps> = ({
               <ImageIcon size={32} className="text-zinc-700" />
               <span className="text-xs font-semibold text-zinc-400">Sem Visualização de Saída</span>
               <span className="text-[10px] text-zinc-600 text-center max-w-[240px]">
-                Selecione as mídias de origem e destino e clique em "Preview" ou inicie o processamento.
+                Selecione as mídias de origem e destino para visualizar a composição em tempo real.
               </span>
             </div>
           )}
@@ -202,29 +204,29 @@ export const VideoComparator: React.FC<VideoComparatorProps> = ({
             <Sliders size={12} className="text-red-500" />
             Opções de Exportação
           </span>
-          <span className="text-[10px] font-mono text-zinc-500">Render Pipeline</span>
+          <span className="text-[10px] font-mono text-zinc-500">Pipeline de Renderização</span>
         </div>
 
-        {/* Linha 1: Configurações de Vídeo */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Linha 1: Configurações de Vídeo (3 Comboboxes) */}
+        <div className="grid grid-cols-3 gap-2.5">
           <div>
-            <label className="text-[10px] font-bold text-zinc-400 block mb-1">Formato do Vídeo</label>
+            <label className="text-[10px] font-bold text-zinc-400 block mb-1">Formato</label>
             <div className="relative">
               <select
                 value={outputFormat}
                 onChange={(e) => setOutputFormat(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded-lg appearance-none font-bold text-zinc-200 outline-none cursor-pointer focus:border-red-500"
               >
-                <option value="MP4">MP4 (Padrão / H.264)</option>
-                <option value="WEBM">WEBM (VP9)</option>
-                <option value="MKV">MKV (Matroska)</option>
+                <option value="MP4">MP4</option>
+                <option value="WEBM">WEBM</option>
+                <option value="MKV">MKV</option>
               </select>
               <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-zinc-500 pointer-events-none" />
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-zinc-400 block mb-1">Qualidade do Vídeo</label>
+            <label className="text-[10px] font-bold text-zinc-400 block mb-1">Qualidade</label>
             <div className="relative">
               <select
                 value={outputQuality}
@@ -234,6 +236,24 @@ export const VideoComparator: React.FC<VideoComparatorProps> = ({
                 <option value="High">Alta (100% - CRF 18)</option>
                 <option value="Medium">Média (80% - CRF 23)</option>
                 <option value="Low">Baixa (50% - CRF 28)</option>
+              </select>
+              <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-zinc-500 pointer-events-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-zinc-400 block mb-1">Encoder / Codec</label>
+            <div className="relative">
+              <select
+                value={outputVideoEncoder}
+                onChange={(e) => setOutputVideoEncoder?.(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded-lg appearance-none font-bold text-zinc-200 outline-none cursor-pointer focus:border-red-500"
+              >
+                <option value="libx264">H.264 (CPU Padrão)</option>
+                <option value="h264_nvenc">NVIDIA NVENC H.264</option>
+                <option value="libx265">HEVC / H.265 (CPU)</option>
+                <option value="hevc_nvenc">NVIDIA NVENC HEVC</option>
+                <option value="libvpx-vp9">VP9 (WebM)</option>
               </select>
               <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-zinc-500 pointer-events-none" />
             </div>
