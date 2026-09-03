@@ -161,6 +161,9 @@ export default function Home() {
   // Export options
   const [outputFormat, setOutputFormat] = useState<string>("MP4");
   const [outputQuality, setOutputQuality] = useState<string>("High");
+  const [outputAudioEncoder, setOutputAudioEncoder] = useState<string>("aac");
+  const [outputAudioQuality, setOutputAudioQuality] = useState<number>(80);
+  const [outputAudioVolume, setOutputAudioVolume] = useState<number>(100);
   const [previewOutputUrl, setPreviewOutputUrl] = useState<string | null>(null);
 
   // Estados de execução
@@ -512,6 +515,9 @@ export default function Home() {
           age_modifier_model: ageModifierModel,
           age_modifier_direction: ageModifierDirection,
           expression_restorer_factor: expressionRestorerFactor,
+          output_audio_encoder: outputAudioEncoder === "none" ? undefined : outputAudioEncoder,
+          output_audio_quality: outputAudioEncoder === "none" ? undefined : outputAudioQuality,
+          output_audio_volume: outputAudioEncoder === "none" ? 0 : outputAudioVolume,
           mappings: mappings.length > 0 ? mappings : undefined,
         }),
       });
@@ -759,6 +765,12 @@ export default function Home() {
                     setOutputFormat={setOutputFormat}
                     outputQuality={outputQuality}
                     setOutputQuality={setOutputQuality}
+                    outputAudioEncoder={outputAudioEncoder}
+                    setOutputAudioEncoder={setOutputAudioEncoder}
+                    outputAudioQuality={outputAudioQuality}
+                    setOutputAudioQuality={setOutputAudioQuality}
+                    outputAudioVolume={outputAudioVolume}
+                    setOutputAudioVolume={setOutputAudioVolume}
                   />
                 </div>
 

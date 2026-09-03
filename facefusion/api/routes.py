@@ -107,6 +107,9 @@ class JobCreateRequest(BaseModel):
     lip_syncer_weight: Optional[float] = None
     expression_restorer_model: Optional[str] = None
     expression_restorer_factor: Optional[float] = None
+    output_audio_encoder: Optional[str] = "aac"
+    output_audio_quality: Optional[int] = 80
+    output_audio_volume: Optional[int] = 100
     mappings: Optional[List[FaceMapping]] = None
 
 
@@ -639,6 +642,12 @@ def apply_processor_args(step_args: Dict[str, Any], request: JobCreateRequest) -
         step_args["expression_restorer_model"] = request.expression_restorer_model
     if request.expression_restorer_factor is not None:
         step_args["expression_restorer_factor"] = request.expression_restorer_factor
+    if request.output_audio_encoder is not None:
+        step_args["output_audio_encoder"] = request.output_audio_encoder
+    if request.output_audio_quality is not None:
+        step_args["output_audio_quality"] = request.output_audio_quality
+    if request.output_audio_volume is not None:
+        step_args["output_audio_volume"] = request.output_audio_volume
 
 
 @router.post("/jobs")
@@ -734,7 +743,11 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
             "output_file": output_filename,
             "output_path": output_path,
             "project_dir": proj_dir,
-            "processors": request.processors
+            "processors": request.processors,
+            "output_format": request.output_format,
+            "output_audio_encoder": request.output_audio_encoder,
+            "output_audio_quality": request.output_audio_quality,
+            "output_audio_volume": request.output_audio_volume
         }
         with open(os.path.join(proj_dir, "project.json"), "w", encoding="utf-8") as pf:
             json.dump(project_meta, pf, indent=2, ensure_ascii=False)
