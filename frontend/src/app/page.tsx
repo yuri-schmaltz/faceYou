@@ -214,6 +214,15 @@ export default function Home() {
   const [ageModifierDirection, setAgeModifierDirection] = useState<number>(0);
   const [expressionRestorerFactor, setExpressionRestorerFactor] = useState<number>(0.8);
 
+  // Configurações Avançadas de Detecção e Máscara
+  const [faceMaskTypes, setFaceMaskTypes] = useState<string[]>(["box", "occlusion"]);
+  const [faceMaskPadding, setFaceMaskPadding] = useState<number[]>([0, 0, 0, 0]);
+  const [faceDetectorModel, setFaceDetectorModel] = useState<string>("yolo_face");
+  const [faceDetectorSize, setFaceDetectorSize] = useState<string>("640x640");
+  const [faceDetectorAngles, setFaceDetectorAngles] = useState<number[]>([0]);
+  const [faceLandmarkerModel, setFaceLandmarkerModel] = useState<string>("2dfan4");
+  const [faceLandmarkerScore, setFaceLandmarkerScore] = useState<number>(0.5);
+
   // Export options
   const [outputFormat, setOutputFormat] = useState<string>("MP4");
   const [outputQuality, setOutputQuality] = useState<string>("High");
@@ -492,6 +501,13 @@ export default function Home() {
           frame_colorizer_size: frameColorizerSize,
           background_remover_model: backgroundRemoverModel,
           background_remover_color: backgroundRemoverColor === "transparent" ? undefined : (backgroundRemoverColor === "black" ? [0, 0, 0] : (backgroundRemoverColor === "white" ? [255, 255, 255] : [0, 255, 0])),
+          face_mask_types: faceMaskTypes,
+          face_mask_padding: faceMaskPadding,
+          face_detector_model: faceDetectorModel,
+          face_detector_size: faceDetectorSize,
+          face_detector_angles: faceDetectorAngles,
+          face_landmarker_model: faceLandmarkerModel,
+          face_landmarker_score: faceLandmarkerScore,
         }),
       });
 
@@ -596,6 +612,13 @@ export default function Home() {
           output_audio_encoder: outputAudioEncoder === "none" ? undefined : outputAudioEncoder,
           output_audio_quality: outputAudioEncoder === "none" ? undefined : outputAudioQuality,
           output_audio_volume: outputAudioEncoder === "none" ? 0 : outputAudioVolume,
+          face_mask_types: faceMaskTypes,
+          face_mask_padding: faceMaskPadding,
+          face_detector_model: faceDetectorModel,
+          face_detector_size: faceDetectorSize,
+          face_detector_angles: faceDetectorAngles,
+          face_landmarker_model: faceLandmarkerModel,
+          face_landmarker_score: faceLandmarkerScore,
           mappings: mappings.length > 0 ? mappings : undefined,
         }),
       });
@@ -921,6 +944,20 @@ export default function Home() {
                       setBackgroundRemoverModel={setBackgroundRemoverModel}
                       backgroundRemoverColor={backgroundRemoverColor}
                       setBackgroundRemoverColor={setBackgroundRemoverColor}
+                      faceMaskTypes={faceMaskTypes}
+                      setFaceMaskTypes={setFaceMaskTypes}
+                      faceMaskPadding={faceMaskPadding}
+                      setFaceMaskPadding={setFaceMaskPadding}
+                      faceDetectorModel={faceDetectorModel}
+                      setFaceDetectorModel={setFaceDetectorModel}
+                      faceDetectorSize={faceDetectorSize}
+                      setFaceDetectorSize={setFaceDetectorSize}
+                      faceDetectorAngles={faceDetectorAngles}
+                      setFaceDetectorAngles={setFaceDetectorAngles}
+                      faceLandmarkerModel={faceLandmarkerModel}
+                      setFaceLandmarkerModel={setFaceLandmarkerModel}
+                      faceLandmarkerScore={faceLandmarkerScore}
+                      setFaceLandmarkerScore={setFaceLandmarkerScore}
                     />
                   </div>
 

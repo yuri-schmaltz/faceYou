@@ -121,6 +121,16 @@ class JobCreateRequest(BaseModel):
     output_audio_volume: Optional[int] = 100
     output_video_encoder: Optional[str] = "libx264"
     output_video_preset: Optional[str] = "medium"
+    # Configurações Avançadas de Detecção e Máscara
+    face_mask_types: Optional[List[str]] = None
+    face_mask_padding: Optional[List[int]] = None
+    face_detector_model: Optional[str] = None
+    face_detector_size: Optional[str] = None
+    face_detector_angles: Optional[List[int]] = None
+    face_landmarker_model: Optional[str] = None
+    face_landmarker_score: Optional[float] = None
+    face_occluder_model: Optional[str] = None
+    face_parser_model: Optional[str] = None
     mappings: Optional[List[FaceMapping]] = None
 
 
@@ -906,6 +916,25 @@ def apply_processor_args(step_args: Dict[str, Any], request: JobCreateRequest) -
         step_args["output_video_encoder"] = request.output_video_encoder
     if request.output_video_preset is not None:
         step_args["output_video_preset"] = request.output_video_preset
+    # Configurações Avançadas de Detecção e Máscara
+    if request.face_mask_types is not None:
+        step_args["face_mask_types"] = request.face_mask_types
+    if request.face_mask_padding is not None:
+        step_args["face_mask_padding"] = request.face_mask_padding
+    if request.face_detector_model is not None:
+        step_args["face_detector_model"] = request.face_detector_model
+    if request.face_detector_size is not None:
+        step_args["face_detector_size"] = request.face_detector_size
+    if request.face_detector_angles is not None:
+        step_args["face_detector_angles"] = request.face_detector_angles
+    if request.face_landmarker_model is not None:
+        step_args["face_landmarker_model"] = request.face_landmarker_model
+    if request.face_landmarker_score is not None:
+        step_args["face_landmarker_score"] = request.face_landmarker_score
+    if request.face_occluder_model is not None:
+        step_args["face_occluder_model"] = request.face_occluder_model
+    if request.face_parser_model is not None:
+        step_args["face_parser_model"] = request.face_parser_model
 
 
 @router.post("/jobs")
@@ -1323,6 +1352,16 @@ class PreviewRequest(BaseModel):
     frame_colorizer_size: Optional[str] = None
     background_remover_model: Optional[str] = None
     background_remover_color: Optional[List[int]] = None
+    # Configurações Avançadas de Detecção e Máscara
+    face_mask_types: Optional[List[str]] = None
+    face_mask_padding: Optional[List[int]] = None
+    face_detector_model: Optional[str] = None
+    face_detector_size: Optional[str] = None
+    face_detector_angles: Optional[List[int]] = None
+    face_landmarker_model: Optional[str] = None
+    face_landmarker_score: Optional[float] = None
+    face_occluder_model: Optional[str] = None
+    face_parser_model: Optional[str] = None
 
 
 @router.post("/preview")
@@ -1448,6 +1487,25 @@ def generate_preview(request: PreviewRequest):
             overrides['background_remover_model'] = request.background_remover_model
         if request.background_remover_color is not None:
             overrides['background_remover_color'] = request.background_remover_color
+        # Configurações Avançadas de Detecção e Máscara
+        if request.face_mask_types is not None:
+            overrides['face_mask_types'] = request.face_mask_types
+        if request.face_mask_padding is not None:
+            overrides['face_mask_padding'] = request.face_mask_padding
+        if request.face_detector_model is not None:
+            overrides['face_detector_model'] = request.face_detector_model
+        if request.face_detector_size is not None:
+            overrides['face_detector_size'] = request.face_detector_size
+        if request.face_detector_angles is not None:
+            overrides['face_detector_angles'] = request.face_detector_angles
+        if request.face_landmarker_model is not None:
+            overrides['face_landmarker_model'] = request.face_landmarker_model
+        if request.face_landmarker_score is not None:
+            overrides['face_landmarker_score'] = request.face_landmarker_score
+        if request.face_occluder_model is not None:
+            overrides['face_occluder_model'] = request.face_occluder_model
+        if request.face_parser_model is not None:
+            overrides['face_parser_model'] = request.face_parser_model
 
         with sm.temporary_state(overrides):
             processors = request.processors or []
