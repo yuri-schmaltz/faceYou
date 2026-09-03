@@ -47,73 +47,78 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         </span>
       </div>
 
-      {/* Direita: Telemetria Completa de Hardware (CPU, RAM, GPU, VRAM) */}
+      {/* Direita: Telemetria com Largura Fixa Rigorosa (Zero Jitter / Sem Tremulação) */}
       <div className="flex items-center">
         {telemetry ? (
-          <div className="flex items-center gap-2.5 bg-zinc-900/80 border border-zinc-800/80 px-2.5 py-0.5 rounded-md text-[11px]">
-            {/* CPU */}
+          <div className="w-[550px] flex items-center justify-between bg-zinc-900/80 border border-zinc-800/80 px-2.5 py-0.5 rounded-md text-[11px] tabular-nums">
+            {/* CPU - largura fixa */}
             <div
-              className="flex items-center gap-1 text-zinc-300"
+              className="w-[74px] flex items-center justify-start gap-1 text-zinc-300 overflow-hidden"
               title={`CPU (${telemetry.cpu.cores || 0} threads lógicas): ${telemetry.cpu.usage_percent}% em uso`}
             >
               <span className="text-[10px] font-bold text-zinc-500">CPU</span>
-              <span className={`font-bold ${telemetry.cpu.usage_percent > 80 ? "text-red-400" : "text-zinc-200"}`}>
-                {telemetry.cpu.usage_percent}%
+              <span className={`font-bold tabular-nums ${telemetry.cpu.usage_percent > 80 ? "text-red-400" : "text-zinc-200"}`}>
+                {Number(telemetry.cpu.usage_percent).toFixed(1)}%
               </span>
             </div>
 
-            <span className="text-zinc-700">|</span>
+            <span className="text-zinc-700 select-none">|</span>
 
-            {/* RAM */}
+            {/* RAM - largura fixa */}
             <div
-              className="flex items-center gap-1 text-zinc-300"
+              className="w-[128px] flex items-center justify-start gap-1 text-zinc-300 overflow-hidden"
               title={`Memória RAM: ${telemetry.ram.used_gb} GB usados de ${telemetry.ram.total_gb} GB (${telemetry.ram.usage_percent}%)`}
             >
               <span className="text-[10px] font-bold text-zinc-500">RAM</span>
-              <span className={`font-bold ${telemetry.ram.usage_percent > 85 ? "text-amber-400" : "text-zinc-200"}`}>
-                {telemetry.ram.used_gb}G <span className="text-zinc-500 font-normal">({telemetry.ram.usage_percent}%)</span>
+              <span className={`font-bold tabular-nums ${telemetry.ram.usage_percent > 85 ? "text-amber-400" : "text-zinc-200"}`}>
+                {Number(telemetry.ram.used_gb).toFixed(1)}G{" "}
+                <span className="text-zinc-500 font-normal">
+                  ({Number(telemetry.ram.usage_percent).toFixed(1)}%)
+                </span>
               </span>
             </div>
 
-            <span className="text-zinc-700">|</span>
+            <span className="text-zinc-700 select-none">|</span>
 
-            {/* GPU */}
+            {/* GPU - largura fixa */}
             <div
-              className="flex items-center gap-1.5 text-zinc-300"
+              className="w-[126px] flex items-center justify-start gap-1.5 text-zinc-300 overflow-hidden"
               title={`${telemetry.gpu.name}: ${telemetry.gpu.usage_percent ?? 0}% de processamento gráfico ativo`}
             >
               <Cpu size={12} className="text-red-500 flex-shrink-0" />
               <span className="text-[10px] font-bold text-zinc-500">GPU</span>
-              <span className="font-bold text-zinc-200">
-                {telemetry.gpu.usage_percent !== null && telemetry.gpu.usage_percent !== undefined ? `${telemetry.gpu.usage_percent}%` : "0%"}
+              <span className="font-bold tabular-nums text-zinc-200">
+                {telemetry.gpu.usage_percent !== null && telemetry.gpu.usage_percent !== undefined
+                  ? `${telemetry.gpu.usage_percent}%`
+                  : "0%"}
               </span>
               {telemetry.gpu.temperature_c !== null && telemetry.gpu.temperature_c !== undefined && (
-                <span className="text-amber-400 font-bold text-[10px] px-1 py-0.2 bg-amber-500/10 rounded">
+                <span className="text-amber-400 font-bold text-[10px] px-1 py-0.2 bg-amber-500/10 rounded tabular-nums">
                   {telemetry.gpu.temperature_c}°C
                 </span>
               )}
             </div>
 
-            <span className="text-zinc-700">|</span>
+            <span className="text-zinc-700 select-none">|</span>
 
-            {/* VRAM */}
+            {/* VRAM - largura fixa */}
             <div
-              className="flex items-center gap-1 text-zinc-300"
+              className="w-[138px] flex items-center justify-start gap-1 text-zinc-300 overflow-hidden"
               title={`Memória de Vídeo Dedicada (VRAM): ${telemetry.gpu.vram_used_gb} GB usados de ${telemetry.gpu.vram_total_gb} GB (${telemetry.gpu.vram_usage_percent}%)`}
             >
               <span className="text-[10px] font-bold text-zinc-500">VRAM</span>
-              <span className={`font-bold ${telemetry.gpu.vram_usage_percent > 85 ? "text-red-400" : "text-emerald-400"}`}>
-                {telemetry.gpu.vram_used_gb}G
+              <span className={`font-bold tabular-nums ${telemetry.gpu.vram_usage_percent > 85 ? "text-red-400" : "text-emerald-400"}`}>
+                {Number(telemetry.gpu.vram_used_gb).toFixed(1)}G
               </span>
-              <span className="text-zinc-500 font-normal text-[10px]">
-                /{telemetry.gpu.vram_total_gb}G ({telemetry.gpu.vram_usage_percent}%)
+              <span className="text-zinc-500 font-normal text-[10px] tabular-nums">
+                /{Number(telemetry.gpu.vram_total_gb).toFixed(0)}G ({Number(telemetry.gpu.vram_usage_percent).toFixed(0)}%)
               </span>
             </div>
 
             {onRefreshHardware && (
               <button
                 onClick={onRefreshHardware}
-                className="text-zinc-500 hover:text-zinc-300 transition-colors ml-1 cursor-pointer"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors ml-1 cursor-pointer flex-shrink-0"
                 title="Atualizar telemetria manualmente"
               >
                 <RefreshCw size={11} />
@@ -121,7 +126,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-zinc-900/70 border border-zinc-800 text-[11px] text-zinc-400">
+          <div className="w-[550px] flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-zinc-900/70 border border-zinc-800 text-[11px] text-zinc-400">
             <Cpu size={12} className="text-red-500 flex-shrink-0" />
             <span className="truncate">{hardwareInfo || "Buscando telemetria..."}</span>
           </div>
