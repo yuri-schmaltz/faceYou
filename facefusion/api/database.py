@@ -36,6 +36,7 @@ class JobModel(Base):
     smoothing: int = Column(Integer, default=5)
     processors: str = Column(Text)  # JSON string list
     step: Optional[str] = Column(String, nullable=True)
+    project_name: Optional[str] = Column(String, nullable=True)
     error_message: Optional[str] = Column(Text, nullable=True)
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -47,6 +48,12 @@ def init_db():
         from sqlalchemy import text
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE jobs ADD COLUMN step TEXT"))
+    except Exception:
+        pass
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN project_name TEXT"))
     except Exception:
         pass
 

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
-import { Toast, SourceItem, DetectedFace, Job } from "../types";
+import { Play, Sparkles, RefreshCw, AlertCircle, Folder } from "lucide-react";
+import { Toast, SourceItem, DetectedFace, Job, Project } from "../types";
 import { resolveApiUrl, formatApiUrl, getInitialApiUrl } from "../utils/api";
 import { useJobs } from "../hooks/useJobs";
+import { useProjects } from "../hooks/useProjects";
 import { useHardware } from "../hooks/useHardware";
 import { usePresets } from "../hooks/usePresets";
 import { ToastContainer } from "../components/ToastContainer";
@@ -14,6 +15,7 @@ import { TargetMediaViewer } from "../components/TargetMediaViewer";
 import { FaceMappingModal } from "../components/FaceMappingModal";
 import { ProcessorSettings } from "../components/ProcessorSettings";
 import { VideoComparator } from "../components/VideoComparator";
+import { ProjectsGallery } from "../components/ProjectsGallery";
 import { JobsList } from "../components/JobsList";
 import { SettingsModal } from "../components/SettingsModal";
 
@@ -23,7 +25,8 @@ export default function Home() {
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
 
   // Navegação
-  const [activeTab, setActiveTab] = useState<"create_new" | "projects" | "settings">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "create_new" | "jobs" | "settings">("projects");
+  const [projectName, setProjectName] = useState<string>("");
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -51,7 +54,28 @@ export default function Home() {
 
   // Custom Hooks
   const { jobs, activeJob, cancelJob, deleteJob, fetchJobs } = useJobs(apiUrl);
+  const { projects, fetchProjects, openProjectFolder, deleteProject } = useProjects(apiUrl);
   const { telemetry, hardwareInfo, availableProviders, fetchHardware } = useHardware(apiUrl);
+
+  const handleOpenProjectInStudio = (proj: Project) => {
+    if (proj.source_url) {
+      setSourceImageFullPath(proj.source_url);
+      setSourceItems([{
+        url: formatApiUrl(apiUrl, proj.source_url),
+        file_path: proj.source_url,
+        filename: proj.source_files[0] || "origem"
+      }]);
+    }
+    if (proj.target_url) {
+      const fullTarget = formatApiUrl(apiUrl, proj.target_url);
+      setTargetMedia(fullTarget);
+      setTargetMediaFullPath(proj.target_url);
+      setTargetMediaName(proj.target_files[0] || "destino");
+    }
+    setProjectName(proj.name);
+    setActiveTab("create_new");
+    showToast("info", "Projeto Carregado", `Mídias do projeto "${proj.name}" carregadas no Estúdio.`);
+  };
   const {
     presets,
     selectedPresetName,
@@ -465,6 +489,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          project_name: projectName.trim() || undefined,
           source_paths: sourcePaths,
           target_path: targetMediaFullPath,
           face_swapper_weight: faceSwapperWeight,
@@ -492,9 +517,11 @@ export default function Home() {
 
       if (!res.ok) throw new Error("Falha ao submeter job.");
       const data = await res.json();
-      showToast("success", "Tarefa Criada", `ID: ${data.job_id} na fila de execução.`);
+      showToast("success", "Projeto Criado", `Subpasta criada em ~/Vídeos: ${data.project_name || data.job_id}`);
       await fetchJobs();
-      setActiveTab("projects");
+      fetchProjects();
+      setProjectName("");
+      setActiveTab("jobs");
     } catch (err: any) {
       showToast("error", "Erro ao Criar Tarefa", err.message || "Falha na conexão.");
     } finally {
@@ -770,24 +797,37 @@ export default function Home() {
                   />
 
                   {/* Actions Bar */}
-                  <div className="flex gap-3 flex-shrink-0 pt-2">
-                    <button
-                      onClick={() => handleGeneratePreview(false)}
-                      disabled={isPreviewLoading || !sourceImageFullPath || !targetMediaFullPath}
-                      className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-3 rounded-xl text-xs transition-all border border-zinc-800 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {isPreviewLoading ? <RefreshCw size={14} className="animate-spin text-amber-500" /> : <Play size={14} />}
-                      GERAR PREVIEW
-                    </button>
+                  <div className="space-y-2 flex-shrink-0 pt-2">
+                    <div className="flex items-center gap-2 bg-zinc-900/90 border border-zinc-800 px-3 py-2 rounded-xl focus-within:border-amber-500/50 transition-all shadow-inner">
+                      <Folder size={15} className="text-amber-400 flex-shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Nome do Projeto na pasta ~/Vídeos (ex: Comercial_Cena1 - opcional)"
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        className="bg-transparent text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none flex-1 font-mono"
+                      />
+                    </div>
 
-                    <button
-                      onClick={handleGenerateSwap}
-                      disabled={isGenerating || !sourceImageFullPath || !targetMediaFullPath}
-                      className="flex-[2] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold py-3 rounded-xl text-xs tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {isGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                      INICIAR PROCESSAMENTO
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleGeneratePreview(false)}
+                        disabled={isPreviewLoading || !sourceImageFullPath || !targetMediaFullPath}
+                        className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-3 rounded-xl text-xs transition-all border border-zinc-800 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {isPreviewLoading ? <RefreshCw size={14} className="animate-spin text-amber-500" /> : <Play size={14} />}
+                        GERAR PREVIEW
+                      </button>
+
+                      <button
+                        onClick={handleGenerateSwap}
+                        disabled={isGenerating || !sourceImageFullPath || !targetMediaFullPath}
+                        className="flex-[2] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold py-3 rounded-xl text-xs tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {isGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        INICIAR PROCESSAMENTO
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -804,8 +844,35 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB 2: PROJETOS */}
+          {/* TAB 1: PROJETOS (Galeria no disco em ~/Vídeos/FaceFusion_Projects) */}
           {activeTab === "projects" && (
+            <ProjectsGallery
+              projects={projects}
+              apiUrl={apiUrl}
+              onOpenFolder={async (name) => {
+                const ok = await openProjectFolder(name);
+                if (ok) showToast("success", "Pasta Aberta", `Abrindo pasta do projeto "${name}" no explorador de arquivos.`);
+                else showToast("error", "Erro", "Não foi possível abrir a pasta.");
+                return ok;
+              }}
+              onDeleteProject={async (name) => {
+                const ok = await deleteProject(name);
+                if (ok) {
+                  showToast("info", "Projeto Excluído", `Projeto "${name}" removido do disco.`);
+                  fetchJobs();
+                } else {
+                  showToast("error", "Erro", "Não foi possível excluir o projeto.");
+                }
+                return ok;
+              }}
+              onOpenInStudio={handleOpenProjectInStudio}
+              onNavigateToStudio={() => setActiveTab("create_new")}
+              onRefresh={fetchProjects}
+            />
+          )}
+
+          {/* TAB 3: JOBS (Fila de Renderização) */}
+          {activeTab === "jobs" && (
             <JobsList
               jobs={jobs}
               onLoadToComparator={handleLoadToComparator}

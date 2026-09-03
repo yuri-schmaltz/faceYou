@@ -9,6 +9,7 @@ export interface Toast {
 export interface Job {
   id: string;
   type: string;
+  project_name?: string;
   status: "idle" | "processing" | "queued" | "completed" | "failed";
   progress: number;
   time?: string;
@@ -19,6 +20,21 @@ export interface Job {
   step?: string;
   date_created?: string;
   date_updated?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  project_dir: string;
+  created_at: string;
+  status: "queued" | "processing" | "completed" | "failed" | "idle";
+  source_files: string[];
+  target_files: string[];
+  output_files: string[];
+  source_url?: string | null;
+  target_url?: string | null;
+  output_url?: string | null;
+  processors?: string[];
 }
 
 export interface Preset {

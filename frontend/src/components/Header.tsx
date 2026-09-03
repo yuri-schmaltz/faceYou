@@ -1,10 +1,10 @@
 import React from "react";
-import { Cpu, RefreshCw, Folder, Sparkles, Settings } from "lucide-react";
+import { Cpu, RefreshCw, Folder, Sparkles, Settings, Layers } from "lucide-react";
 import { HardwareTelemetry } from "../types";
 
 interface HeaderProps {
-  activeTab: "projects" | "create_new" | "settings";
-  setActiveTab: (tab: "projects" | "create_new" | "settings") => void;
+  activeTab: "projects" | "create_new" | "jobs" | "settings";
+  setActiveTab: (tab: "projects" | "create_new" | "jobs" | "settings") => void;
   queuedCount?: number;
   telemetry?: HardwareTelemetry | null;
   hardwareInfo?: string;
@@ -29,19 +29,17 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 border border-red-500/20">
             F
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5 leading-none">
-              <span className="font-extrabold text-sm tracking-tight text-white">Face</span>
-              <span className="font-extrabold text-sm tracking-tight text-red-500">Fusion</span>
-            </div>
-            <span className="text-[10px] font-mono font-medium text-zinc-500 tracking-wider mt-0.5">
-              v3.8.2 Decoupled
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-black text-lg tracking-tight text-white">Face</span>
+            <span className="font-black text-lg tracking-tight text-red-500">Fusion</span>
+            <span className="text-xs font-mono font-medium text-zinc-500 ml-1.5">
+              v3.8.2
             </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Centro: Abas de Navegação (Projetos / Estúdio / Configurações) */}
+      {/* 2. Centro: Abas de Navegação (Projetos / Estúdio / Jobs / Configurações) */}
       <nav className="flex items-center justify-center">
         <div className="flex items-center gap-1 bg-zinc-900/90 border border-zinc-800/80 p-1 rounded-xl shadow-inner backdrop-blur-md">
           {/* Aba 1: Projetos */}
@@ -58,11 +56,6 @@ export const Header: React.FC<HeaderProps> = ({
               className={activeTab === "projects" ? "text-amber-400" : "text-zinc-500"}
             />
             <span>Projetos</span>
-            {queuedCount > 0 && (
-              <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full animate-pulse">
-                {queuedCount}
-              </span>
-            )}
           </button>
 
           {/* Aba 2: Estúdio */}
@@ -81,7 +74,28 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Estúdio</span>
           </button>
 
-          {/* Aba 3: Configurações */}
+          {/* Aba 3: Jobs (Fila de Renderização) */}
+          <button
+            onClick={() => setActiveTab("jobs")}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
+              activeTab === "jobs"
+                ? "bg-zinc-800 text-white shadow-md border border-zinc-700/60 shadow-black/40"
+                : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
+            }`}
+          >
+            <Layers
+              size={15}
+              className={activeTab === "jobs" ? "text-blue-400" : "text-zinc-500"}
+            />
+            <span>Jobs</span>
+            {queuedCount > 0 && (
+              <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full animate-pulse">
+                {queuedCount}
+              </span>
+            )}
+          </button>
+
+          {/* Aba 4: Configurações */}
           <button
             onClick={() => setActiveTab("settings")}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${

@@ -128,6 +128,23 @@ def worker_loop():
                             job_to_update.error_message = "Erro de execução nos passos do FaceFusion."
                             print(f"[Worker] Job {job_id} falhou nos passos de execução.", flush=True)
                         db.commit()
+                        
+                        # Sincronizar status com project.json na pasta Vídeos
+                        if job_to_update.output_path:
+                            try:
+                                import json
+                                proj_dir = os.path.dirname(os.path.dirname(job_to_update.output_path))
+                                meta_path = os.path.join(proj_dir, "project.json")
+                                if os.path.exists(meta_path):
+                                    with open(meta_path, "r", encoding="utf-8") as pf:
+                                        meta = json.load(pf)
+                                    meta["status"] = job_to_update.status
+                                    if job_to_update.error_message:
+                                        meta["error_message"] = job_to_update.error_message
+                                    with open(meta_path, "w", encoding="utf-8") as pf:
+                                        json.dump(meta, pf, indent=2, ensure_ascii=False)
+                            except Exception:
+                                pass
                     db.close()
                     
                 except Exception as e:
@@ -143,6 +160,22 @@ def worker_loop():
                             job_to_update.progress = 0
                             job_to_update.error_message = f"Exceção: {str(e)}\n{error_trace}"
                             db.commit()
+                            
+                            # Sincronizar status com project.json na pasta Vídeos
+                            if job_to_update.output_path:
+                                try:
+                                    import json
+                                    proj_dir = os.path.dirname(os.path.dirname(job_to_update.output_path))
+                                    meta_path = os.path.join(proj_dir, "project.json")
+                                    if os.path.exists(meta_path):
+                                        with open(meta_path, "r", encoding="utf-8") as pf:
+                                            meta = json.load(pf)
+                                        meta["status"] = job_to_update.status
+                                        meta["error_message"] = job_to_update.error_message
+                                        with open(meta_path, "w", encoding="utf-8") as pf:
+                                            json.dump(meta, pf, indent=2, ensure_ascii=False)
+                                except Exception:
+                                    pass
                     db.close()
                 finally:
                     set_current_job_id(None)

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FolderOpen, AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle, Sparkles } from "lucide-react";
+import { FolderOpen, AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle, Sparkles, Layers } from "lucide-react";
 import { Job } from "../types";
 
 interface JobsListProps {
@@ -28,13 +28,15 @@ export const JobsList: React.FC<JobsListProps> = ({
   });
 
   return (
-    <div className="space-y-6 animate-fade-in flex-1 overflow-hidden flex flex-col">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <FolderOpen className="text-red-500" size={24} />
+    <div className="space-y-6 animate-fade-in flex-1 overflow-hidden flex flex-col p-6 max-w-7xl mx-auto w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5 flex-shrink-0">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
+            <Layers size={22} />
+          </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Galeria de Projetos</h2>
-            <p className="text-xs text-zinc-500">Histórico de todas as manipulações criadas e seus arquivos.</p>
+            <h2 className="text-xl font-black text-white tracking-tight">Fila de Renderização (Jobs)</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">Acompanhe o processamento de frames, etapas ativas e histórico de renderizações.</p>
           </div>
         </div>
 
@@ -137,10 +139,16 @@ export const JobsList: React.FC<JobsListProps> = ({
               <div className="p-5 space-y-4">
                 <div>
                   <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-sm text-white truncate max-w-[150px]">{job.id}</h3>
+                    <div>
+                      <h3 className="font-bold text-sm text-white truncate max-w-[180px]">{job.id}</h3>
+                      {job.project_name && (
+                        <span className="inline-block mt-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 border border-zinc-700/60 text-zinc-300">
+                          📁 {job.project_name}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-zinc-500 font-semibold">{job.time}</span>
                   </div>
-                  <p className="text-xs text-zinc-400">Face Swap Pipeline</p>
                 </div>
 
                 {/* Ações */}

@@ -2,6 +2,8 @@ import os
 import shutil
 import uuid
 import json
+import datetime
+import sys
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Depends
 from fastapi.responses import FileResponse
@@ -21,6 +23,19 @@ from facefusion.api.database import get_db, JobModel, SessionLocal
 router = APIRouter()
 
 
+def get_user_projects_dir() -> str:
+    home = os.path.expanduser("~")
+    videos_dir = os.path.join(home, "Vídeos")
+    if not os.path.exists(videos_dir):
+        videos_dir = os.path.join(home, "Videos")
+    if not os.path.exists(videos_dir):
+        videos_dir = os.path.join(home, "Videos")
+        os.makedirs(videos_dir, exist_ok=True)
+    projects_dir = os.path.join(videos_dir, "FaceFusion_Projects")
+    os.makedirs(projects_dir, exist_ok=True)
+    return os.path.abspath(projects_dir)
+
+
 def get_allowed_directories() -> List[str]:
     jobs_path = state_manager.get_item("jobs_path") or get_default_path('data')
     temp_path = state_manager.get_item("temp_path") or get_default_path('temp')
@@ -30,6 +45,7 @@ def get_allowed_directories() -> List[str]:
         os.path.abspath(jobs_path),
         os.path.abspath(temp_path),
         os.path.abspath(cache_path),
+        get_user_projects_dir(),
         root_dir
     ]
 
@@ -56,6 +72,7 @@ class FaceMapping(BaseModel):
 
 
 class JobCreateRequest(BaseModel):
+    project_name: Optional[str] = None
     source_paths: List[str]
     target_path: str
     face_swapper_weight: Optional[float] = 0.5
@@ -296,6 +313,141 @@ def get_output_file(filename: str):
     raise HTTPException(status_code=404, detail="Arquivo de mídia não encontrado")
 
 
+@router.get("/projects")
+def list_projects() -> List[Dict[str, Any]]:
+    """
+    Lista todas as pastas de projetos criadas em ~/Vídeos/FaceFusion_Projects/
+    com seus respectivos arquivos de origem, destino, produto final e metadados.
+    """
+    try:
+        projects_dir = get_user_projects_dir()
+        projects = []
+
+        if not os.path.exists(projects_dir):
+            return []
+
+        for entry in os.scandir(projects_dir):
+            if entry.is_dir():
+                proj_name = entry.name
+                proj_path = entry.path
+                meta_path = os.path.join(proj_path, "project.json")
+                meta = {}
+                if os.path.exists(meta_path):
+                    try:
+                        with open(meta_path, "r", encoding="utf-8") as f:
+                            meta = json.load(f)
+                    except Exception:
+                        pass
+
+                source_dir = os.path.join(proj_path, "source")
+                target_dir = os.path.join(proj_path, "target")
+                output_dir = os.path.join(proj_path, "output")
+
+                sources = [f for f in os.listdir(source_dir)] if os.path.exists(source_dir) else []
+                targets = [f for f in os.listdir(target_dir)] if os.path.exists(target_dir) else []
+                outputs = [f for f in os.listdir(output_dir)] if os.path.exists(output_dir) else []
+
+                has_output = len(outputs) > 0
+                status = meta.get("status") or ("completed" if has_output else "queued")
+
+                first_source = sources[0] if sources else None
+                first_target = targets[0] if targets else None
+                first_output = outputs[0] if outputs else None
+
+                source_url = f"/api/projects/media/{proj_name}/source/{first_source}" if first_source else None
+                target_url = f"/api/projects/media/{proj_name}/target/{first_target}" if first_target else None
+                output_url = f"/api/projects/media/{proj_name}/output/{first_output}" if first_output else None
+
+                ctime = os.path.getctime(proj_path)
+                created_at = meta.get("created_at") or datetime.datetime.fromtimestamp(ctime).isoformat()
+
+                projects.append({
+                    "id": meta.get("id") or proj_name,
+                    "name": proj_name,
+                    "project_dir": proj_path,
+                    "created_at": created_at,
+                    "status": status,
+                    "source_files": sources,
+                    "target_files": targets,
+                    "output_files": outputs,
+                    "source_url": source_url,
+                    "target_url": target_url,
+                    "output_url": output_url,
+                    "processors": meta.get("processors", ["face_swapper"])
+                })
+
+        projects.sort(key=lambda p: p["created_at"], reverse=True)
+        return projects
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar projetos: {str(e)}")
+
+
+@router.get("/projects/media/{project_name}/{folder}/{filename:path}")
+def get_project_media(project_name: str, folder: str, filename: str):
+    """
+    Retorna com segurança os arquivos de mídia (source, target, output) pertencentes a um projeto na pasta Vídeos.
+    """
+    if folder not in ("source", "target", "output"):
+        raise HTTPException(status_code=400, detail="Pasta de projeto inválida.")
+
+    proj_dir = os.path.join(get_user_projects_dir(), project_name)
+    file_path = validate_safe_path(os.path.join(proj_dir, folder, filename))
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Arquivo de mídia não encontrado no projeto.")
+
+    return FileResponse(file_path)
+
+
+@router.post("/api/projects/{project_name}/open-folder")
+@router.post("/projects/{project_name}/open-folder")
+def open_project_folder(project_name: str) -> Dict[str, Any]:
+    """
+    Abre o diretório do projeto no explorador de arquivos gráfico do sistema operacional (ex: Dolphin / Nautilus).
+    """
+    proj_dir = os.path.join(get_user_projects_dir(), project_name)
+    validate_safe_path(proj_dir)
+
+    if not os.path.exists(proj_dir):
+        raise HTTPException(status_code=404, detail="Pasta do projeto não encontrada no disco.")
+
+    try:
+        import subprocess
+        if sys.platform.startswith("linux"):
+            subprocess.Popen(["xdg-open", proj_dir])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", proj_dir])
+        elif sys.platform == "win32":
+            subprocess.Popen(["explorer", proj_dir])
+        return {"status": "success", "message": f"Pasta do projeto '{project_name}' aberta no explorador de arquivos."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao abrir pasta do projeto: {str(e)}")
+
+
+@router.delete("/projects/{project_name}")
+def delete_project(project_name: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Exclui a pasta completa do projeto em ~/Vídeos/FaceFusion_Projects/ e remove jobs associados.
+    """
+    proj_dir = os.path.join(get_user_projects_dir(), project_name)
+    validate_safe_path(proj_dir)
+
+    if not os.path.exists(proj_dir):
+        raise HTTPException(status_code=404, detail="Pasta do projeto não encontrada no disco.")
+
+    try:
+        import shutil
+        shutil.rmtree(proj_dir)
+        # Excluir jobs associados do banco
+        jobs = db.query(JobModel).filter_by(project_name=project_name).all()
+        for j in jobs:
+            db.delete(j)
+        db.commit()
+        return {"status": "success", "message": f"Projeto '{project_name}' excluído com sucesso."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao excluir projeto: {str(e)}")
+
+
 @router.get("/jobs")
 def list_jobs(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
     """
@@ -313,17 +465,21 @@ def list_jobs(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
                         source = f"/api/media/upload/{os.path.basename(source_list[0])}"
                 except Exception:
                     pass
-            
+
             target = ""
             if job.target_path:
                 target = f"/api/media/upload/{os.path.basename(job.target_path)}"
-                
+
             output = ""
             if job.output_path:
-                output = f"/api/media/output/{os.path.basename(job.output_path)}"
-                
+                if job.project_name:
+                    output = f"/api/projects/media/{job.project_name}/output/{os.path.basename(job.output_path)}"
+                else:
+                    output = f"/api/media/output/{os.path.basename(job.output_path)}"
+
             jobs_list.append({
                 "id": job.id,
+                "project_name": job.project_name,
                 "status": job.status,
                 "progress": job.progress,
                 "date_created": job.created_at,
@@ -357,12 +513,17 @@ async def stream_jobs():
                 data = [
                     {
                         "id": j.id,
+                        "project_name": j.project_name,
                         "status": j.status,
                         "progress": j.progress,
                         "step": j.step,
                         "error_message": j.error_message,
                         "output_path": j.output_path,
-                        "outputUrl": f"/api/media/output/{os.path.basename(j.output_path)}" if j.output_path and os.path.exists(j.output_path) else None,
+                        "outputUrl": (
+                            f"/api/projects/media/{j.project_name}/output/{os.path.basename(j.output_path)}"
+                            if j.project_name and j.output_path and os.path.exists(j.output_path)
+                            else (f"/api/media/output/{os.path.basename(j.output_path)}" if j.output_path and os.path.exists(j.output_path) else None)
+                        ),
                         "created_at": j.created_at.isoformat() if j.created_at else None,
                         "updated_at": j.updated_at.isoformat() if j.updated_at else None
                     }
@@ -525,8 +686,58 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
 
         target_ext = os.path.splitext(resolved_target_path)[1] or ".mp4"
         job_id = f"job-{uuid.uuid4().hex[:8]}"
-        output_filename = f"{job_id}_swapped{target_ext}"
-        output_path = os.path.abspath(os.path.join(outputs_dir, output_filename))
+
+        # Estrutura de Projeto em ~/Vídeos/FaceFusion_Projects/<nome_do_projeto>/
+        import re, shutil
+        if request.project_name and request.project_name.strip():
+            safe_project_name = re.sub(r'[^a-zA-Z0-9_\- ]+', '_', request.project_name.strip())
+        else:
+            safe_project_name = f"Projeto_{datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')}"
+
+        projects_dir = get_user_projects_dir()
+        proj_dir = os.path.join(projects_dir, safe_project_name)
+        source_dir = os.path.join(proj_dir, "source")
+        target_dir = os.path.join(proj_dir, "target")
+        output_dir = os.path.join(proj_dir, "output")
+        os.makedirs(source_dir, exist_ok=True)
+        os.makedirs(target_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Copiar fontes para a subpasta source/ do projeto
+        project_source_paths = []
+        for p in resolved_source_paths:
+            src_fname = os.path.basename(p)
+            dest_src = os.path.join(source_dir, src_fname)
+            if not os.path.exists(dest_src) or os.path.abspath(p) != os.path.abspath(dest_src):
+                shutil.copy2(p, dest_src)
+            project_source_paths.append(dest_src)
+
+        # Copiar destino para a subpasta target/ do projeto
+        tgt_fname = os.path.basename(resolved_target_path)
+        dest_tgt = os.path.join(target_dir, tgt_fname)
+        if not os.path.exists(dest_tgt) or os.path.abspath(resolved_target_path) != os.path.abspath(dest_tgt):
+            shutil.copy2(resolved_target_path, dest_tgt)
+        project_target_path = dest_tgt
+
+        # Caminho final da renderização na pasta output/
+        output_filename = f"resultado{target_ext}"
+        output_path = os.path.abspath(os.path.join(output_dir, output_filename))
+
+        # Criar project.json de metadados
+        project_meta = {
+            "id": job_id,
+            "name": safe_project_name,
+            "created_at": datetime.datetime.now().isoformat(),
+            "status": "queued",
+            "source_files": [os.path.basename(p) for p in project_source_paths],
+            "target_file": tgt_fname,
+            "output_file": output_filename,
+            "output_path": output_path,
+            "project_dir": proj_dir,
+            "processors": request.processors
+        }
+        with open(os.path.join(proj_dir, "project.json"), "w", encoding="utf-8") as pf:
+            json.dump(project_meta, pf, indent=2, ensure_ascii=False)
 
         # 1. Criar os arquivos de job no disco
         if not job_manager.create_job(job_id):
@@ -545,12 +756,18 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
                 if not (is_image(resolved_mapping_source) or is_video(resolved_mapping_source)):
                     raise HTTPException(status_code=400, detail=f"Arquivo de origem mapeado com formato inválido ou corrompido: {resolved_mapping_source}")
 
+                # Copiar também para source_dir se ainda não estiver
+                map_fname = os.path.basename(resolved_mapping_source)
+                map_dest_src = os.path.join(source_dir, map_fname)
+                if not os.path.exists(map_dest_src) or os.path.abspath(resolved_mapping_source) != os.path.abspath(map_dest_src):
+                    shutil.copy2(resolved_mapping_source, map_dest_src)
+
                 step_args = collect_step_args()
-                step_args["source_paths"] = [resolved_mapping_source]
+                step_args["source_paths"] = [map_dest_src]
                 
                 # Interligar passos sequencialmente
                 if idx == 0:
-                    step_args["target_path"] = resolved_target_path
+                    step_args["target_path"] = project_target_path
                 else:
                     step_args["target_path"] = job_helper.get_step_output_path(job_id, idx - 1, output_path)
 
@@ -559,7 +776,7 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
                 step_args["face_selector_mode"] = "reference"
                 step_args["reference_face_position"] = mapping.target_face_index
                 step_args["reference_frame_number"] = mapping.reference_frame_number
-                step_args["reference_target_path"] = resolved_target_path
+                step_args["reference_target_path"] = project_target_path
 
                 apply_processor_args(step_args, request)
 
@@ -568,8 +785,8 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
         else:
             # Fluxo padrão de face única/tudo
             step_args = collect_step_args()
-            step_args["source_paths"] = resolved_source_paths
-            step_args["target_path"] = resolved_target_path
+            step_args["source_paths"] = project_source_paths
+            step_args["target_path"] = project_target_path
             step_args["output_path"] = output_path
             step_args["processors"] = request.processors
 
@@ -586,8 +803,9 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
             id=job_id,
             status="queued",
             progress=0,
-            source_paths=json.dumps(resolved_source_paths if not request.mappings else [m.source_path for m in request.mappings]),
-            target_path=resolved_target_path,
+            project_name=safe_project_name,
+            source_paths=json.dumps(project_source_paths),
+            target_path=project_target_path,
             output_path=output_path,
             face_swapper_weight=request.face_swapper_weight,
             face_mask_blur=request.face_mask_blur,
@@ -600,9 +818,10 @@ def create_job(request: JobCreateRequest, db: Session = Depends(get_db)) -> Dict
 
         return {
             "job_id": job_id,
+            "project_name": safe_project_name,
             "status": "queued",
             "output_path": output_path,
-            "output_url": f"/api/media/output/{output_filename}"
+            "output_url": f"/api/projects/media/{safe_project_name}/output/{output_filename}"
         }
     except Exception as e:
         import traceback
