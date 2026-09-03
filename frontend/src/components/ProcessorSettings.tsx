@@ -227,7 +227,7 @@ export const ProcessorSettings: React.FC<ProcessorSettingsProps> = ({
             <Cpu size={14} className="text-red-500" />
             <span>Processadores</span>
             <span className="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-              {selectedProcessors.length} ativos ({availableProcessors.length} disponíveis)
+              {selectedProcessors.length} {selectedProcessors.length === 1 ? "ativo" : "ativos"}
             </span>
           </div>
 
