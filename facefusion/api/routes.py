@@ -265,6 +265,155 @@ def update_config(request: ConfigUpdateRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar configuração: {str(e)}")
 
 
+# ---------------------------------------------------------
+# GERENCIADOR DE DOWNLOAD DE MODELOS DE IA
+# ---------------------------------------------------------
+model_download_state = {
+    "status": "idle",  # "idle" | "downloading" | "completed" | "error" | "cancelled"
+    "scope": "full",
+    "current_model": "",
+    "downloaded": 0,
+    "total": 0,
+    "percent": 0.0,
+    "error": None
+}
+download_thread = None
+
+class DownloadModelsRequest(BaseModel):
+    download_scope: Optional[str] = "full"
+    download_provider: Optional[str] = "github"
+
+
+def _calculate_models_disk_info() -> Dict[str, Any]:
+    models_dir = os.path.abspath(".assets/models")
+    if not os.path.exists(models_dir):
+        return {"count": 0, "size_gb": 0.0}
+    
+    total_bytes = 0
+    onnx_count = 0
+    try:
+        for root, _, files in os.walk(models_dir):
+            for f in files:
+                fp = os.path.join(root, f)
+                total_bytes += os.path.getsize(fp)
+                if f.endswith(".onnx"):
+                    onnx_count += 1
+        return {
+            "count": onnx_count,
+            "size_gb": round(total_bytes / (1024 ** 3), 2)
+        }
+    except Exception:
+        return {"count": 0, "size_gb": 0.0}
+
+
+def _run_models_download(scope: str, provider: str):
+    global model_download_state
+    try:
+        model_download_state["status"] = "downloading"
+        model_download_state["scope"] = scope
+        model_download_state["error"] = None
+        
+        from facefusion import state_manager
+        providers = [provider, "huggingface" if provider == "github" else "github"]
+        state_manager.init_item("download_providers", providers)
+        state_manager.set_item("download_providers", providers)
+        state_manager.init_item("download_scope", scope)
+        state_manager.set_item("download_scope", scope)
+        
+        from facefusion.filesystem import get_file_name, resolve_file_paths
+        from facefusion.processors.core import get_processors_modules
+        from facefusion.download import conditional_download_hashes, conditional_download_sources
+        
+        available_processors = [ get_file_name(file_path) for file_path in resolve_file_paths("facefusion/processors/modules") ]
+        processor_modules = get_processors_modules(available_processors)
+        common_modules = []
+        for processor_module in processor_modules:
+            for common_module in processor_module.get_common_modules():
+                if common_module not in common_modules:
+                    common_modules.append(common_module)
+
+        model_list = []
+        for module in common_modules + processor_modules:
+            if hasattr(module, "create_static_model_set"):
+                model_set = module.create_static_model_set(scope)
+                for model_key, model_data in model_set.items():
+                    model_list.append((model_key, model_data))
+
+        model_download_state["total"] = len(model_list)
+        model_download_state["downloaded"] = 0
+        
+        for idx, (model_key, model_data) in enumerate(model_list):
+            if model_download_state["status"] == "cancelled":
+                break
+            model_download_state["current_model"] = model_key
+            model_download_state["downloaded"] = idx
+            model_download_state["percent"] = round((idx / max(len(model_list), 1)) * 100, 1)
+            
+            hashes = model_data.get("hashes")
+            sources = model_data.get("sources")
+            if hashes and sources:
+                conditional_download_hashes(hashes)
+                conditional_download_sources(sources)
+
+        if model_download_state["status"] != "cancelled":
+            model_download_state["downloaded"] = len(model_list)
+            model_download_state["percent"] = 100.0
+            model_download_state["status"] = "completed"
+            model_download_state["current_model"] = "Todos os modelos baixados com sucesso!"
+    except Exception as e:
+        model_download_state["status"] = "error"
+        model_download_state["error"] = str(e)
+
+
+@router.get("/models/status")
+def get_models_status() -> Dict[str, Any]:
+    """
+    Retorna o status do download de modelos e o uso de disco em .assets/models/.
+    """
+    disk_info = _calculate_models_disk_info()
+    return {
+        **model_download_state,
+        "disk": disk_info
+    }
+
+
+@router.post("/models/download")
+def start_models_download(request: DownloadModelsRequest) -> Dict[str, Any]:
+    """
+    Inicia o download de todos os modelos em segundo plano.
+    """
+    global download_thread, model_download_state
+    if model_download_state["status"] == "downloading":
+        return {"status": "already_running", "message": "Download de modelos já está em andamento."}
+    
+    scope = request.download_scope or "full"
+    provider = request.download_provider or "github"
+    model_download_state["status"] = "downloading"
+    model_download_state["scope"] = scope
+    model_download_state["percent"] = 0.0
+    model_download_state["downloaded"] = 0
+    model_download_state["error"] = None
+    
+    import threading
+    download_thread = threading.Thread(target=_run_models_download, args=(scope, provider), daemon=True)
+    download_thread.start()
+    
+    return {"status": "started", "message": f"Download de modelos ({scope}) iniciado em segundo plano."}
+
+
+@router.post("/models/cancel")
+def cancel_models_download() -> Dict[str, Any]:
+    """
+    Cancela o download de modelos em andamento.
+    """
+    global model_download_state
+    if model_download_state["status"] == "downloading":
+        model_download_state["status"] = "cancelled"
+        model_download_state["current_model"] = "Download cancelado pelo usuário."
+        return {"status": "cancelled", "message": "Download de modelos cancelado."}
+    return {"status": "idle", "message": "Nenhum download em andamento."}
+
+
 @router.post("/media/upload")
 def upload_media(file: UploadFile = File(...)):
     """
