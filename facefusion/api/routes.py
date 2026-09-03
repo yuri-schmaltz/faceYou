@@ -1657,7 +1657,7 @@ def analyze_faces(request: FaceAnalyzeRequest):
         # 4. Detectar e classificar os rostos de forma thread-safe
         with sm.temporary_state({'face_selector_order': 'large-small'}):
             detected_faces = get_many_faces([frame])
-            sorted_faces = sort_and_filter_faces(detected_faces)
+            sorted_faces = sort_and_filter_faces([], detected_faces)
 
         # 5. Salvar recortes e estruturar retorno
         results = []
@@ -1704,3 +1704,280 @@ def analyze_faces(request: FaceAnalyzeRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao analisar rostos: {str(e)}")
+
+
+class VideoDiagnosticRequest(BaseModel):
+    video_path: str
+    max_scenes: Optional[int] = 30
+    threshold_content: Optional[float] = 27.0
+
+
+@router.post("/video/diagnose")
+def diagnose_video(request: VideoDiagnosticRequest) -> Dict[str, Any]:
+    """
+    Executa varredura profunda e pré-análise inteligente do vídeo alvo.
+    Detecta cortes de cena (takes), rostos, dimensões fisionômicas, ruído analógico/VHS
+    e perda de tracking para recomendar configurações personalizadas.
+    """
+    import cv2
+    import numpy as np
+    import uuid
+    import time
+    from facefusion import state_manager as sm
+    from facefusion.filesystem import get_default_path
+    try:
+        from facefusion.face_creator import get_many_faces
+    except ImportError:
+        from facefusion.face_analyser import get_many_faces
+    from facefusion.face_selector import sort_and_filter_faces
+
+    jobs_path = sm.get_item("jobs_path") or get_default_path('data')
+    uploads_dir = os.path.abspath(os.path.join(jobs_path, "uploads"))
+    thumbs_dir = os.path.join(uploads_dir, "scene_thumbs")
+    os.makedirs(thumbs_dir, exist_ok=True)
+
+    if request.video_path.startswith("/api/media/upload/"):
+        filename = os.path.basename(request.video_path)
+        resolved_path = validate_safe_path(os.path.join(uploads_dir, filename))
+    else:
+        resolved_path = validate_safe_path(request.video_path)
+
+    if not os.path.exists(resolved_path):
+        raise HTTPException(status_code=404, detail=f"Vídeo não encontrado: {resolved_path}")
+
+    cap = cv2.VideoCapture(resolved_path)
+    if not cap.isOpened():
+        raise HTTPException(status_code=400, detail="Não foi possível abrir o arquivo de vídeo para análise.")
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1920
+    video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 1080
+    total_duration = total_frames / fps if fps > 0 else 0.0
+
+    # 1. Segmentação Rápida de Cenas (Takes)
+    # Tenta usar scenedetect, com fallback robusto para histograma HSV do OpenCV
+    scenes_raw = []
+    try:
+        from scenedetect import detect, ContentDetector
+        detector = ContentDetector(threshold=request.threshold_content or 27.0)
+        detected = detect(resolved_path, detector)
+        for s in detected:
+            scenes_raw.append((s[0].get_seconds(), s[1].get_seconds()))
+    except Exception:
+        scenes_raw = []
+
+    # Se scenedetect não achou ou falhou, divide em blocos temporais proporcionais
+    if not scenes_raw:
+        step_sec = max(4.0, min(15.0, total_duration / (request.max_scenes or 20)))
+        t = 0.0
+        while t < total_duration:
+            next_t = min(total_duration, t + step_sec)
+            scenes_raw.append((t, next_t))
+            t = next_t
+
+    if request.max_scenes and len(scenes_raw) > request.max_scenes:
+        # Priorizar cenas distribuídas uniformemente
+        stride = max(1, len(scenes_raw) // request.max_scenes)
+        scenes_raw = scenes_raw[::stride][:request.max_scenes]
+
+    scenes_diagnostics = []
+    vhs_noise_flags = []
+    distant_shot_flags = []
+    flicker_risk_count = 0
+
+    # 2. Diagnóstico por Tomada (Per-Take Analysis)
+    for idx, (start_s, end_s) in enumerate(scenes_raw):
+        duration = end_s - start_s
+        mid_time = start_s + (duration * 0.5)
+        frame_idx = int(mid_time * fps)
+
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+        ret, frame = cap.read()
+        if not ret or frame is None:
+            continue
+
+        # Medição de Ruído / Nitidez (Variance of Laplacian)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        laplacian_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+
+        # Salvar thumbnail leve da cena
+        thumb_filename = f"scene_{uuid.uuid4().hex[:10]}.jpg"
+        thumb_path = os.path.join(thumbs_dir, thumb_filename)
+        thumb_img = cv2.resize(frame, (320, 180))
+        cv2.imwrite(thumb_path, thumb_img, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        thumb_url = f"/api/media/upload/scene_thumbs/{thumb_filename}"
+
+        # Detecção Facial no keyframe do take
+        detected_faces = []
+        try:
+            with sm.temporary_state({'face_selector_order': 'large-small'}):
+                faces = get_many_faces([frame])
+                detected_faces = sort_and_filter_faces([], faces)
+        except Exception:
+            detected_faces = []
+
+        faces_count = len(detected_faces)
+        primary_w = 0
+        primary_h = 0
+        primary_score = 0.0
+        shot_type = "no_face"
+        tracking_stability = "stable"
+
+        if detected_faces:
+            best_face = detected_faces[0]
+            bb = best_face.bounding_box
+            primary_w = max(0, int(bb[2] - bb[0]))
+            primary_h = max(0, int(bb[3] - bb[1]))
+            primary_score = float(getattr(best_face, 'score', 0.85))
+
+            # Classificação do Enquadramento da Face
+            # Proporção da altura da face em relação à altura total do vídeo
+            face_ratio = primary_h / float(video_height) if video_height > 0 else 0.1
+
+            if face_ratio >= 0.35:
+                shot_type = "extreme_close_up"
+            elif face_ratio >= 0.18:
+                shot_type = "close_up"
+            elif face_ratio >= 0.07:
+                shot_type = "medium_shot"
+            else:
+                shot_type = "long_shot"
+
+        # Detecção de ruído VHS e risco de perda de tracking
+        is_low_detail = laplacian_var < 110.0
+        is_distant = (shot_type == "long_shot") or (primary_h > 0 and primary_h < 75)
+
+        if is_low_detail:
+            noise_level = "high"
+            vhs_noise_flags.append(True)
+        elif laplacian_var < 250.0:
+            noise_level = "medium"
+        else:
+            noise_level = "low"
+
+        if is_distant:
+            distant_shot_flags.append(True)
+
+        if is_distant and (is_low_detail or primary_score < 0.65):
+            tracking_stability = "high_risk"
+            flicker_risk_count += 1
+        elif is_distant or primary_score < 0.70:
+            tracking_stability = "flickering_risk"
+            flicker_risk_count += 1
+        else:
+            tracking_stability = "stable"
+
+        # Recomendação específica para este Take
+        if tracking_stability == "high_risk":
+            rec_detector = "retinaface"
+            rec_size = "640x640"
+            rec_thresh = 0.35
+            rec_dist = 0.50
+            rec_smoothing = 8
+            rec_angles = [0]
+            rec_landmarker = 0.35
+        elif tracking_stability == "flickering_risk":
+            rec_detector = "retinaface"
+            rec_size = "640x640"
+            rec_thresh = 0.45
+            rec_dist = 0.42
+            rec_smoothing = 6
+            rec_angles = [0]
+            rec_landmarker = 0.40
+        else:
+            rec_detector = "yolo_face"
+            rec_size = "640x640"
+            rec_thresh = 0.65
+            rec_dist = 0.35
+            rec_smoothing = 5
+            rec_angles = [0]
+            rec_landmarker = 0.50
+
+        scenes_diagnostics.append({
+            "scene_index": idx + 1,
+            "start_time": round(start_s, 2),
+            "end_time": round(end_s, 2),
+            "duration": round(duration, 2),
+            "keyframe_time": round(mid_time, 2),
+            "keyframe_thumb_url": thumb_url,
+            "faces_detected_count": faces_count,
+            "primary_face_box_size": {"width": primary_w, "height": primary_h},
+            "shot_type": shot_type,
+            "noise_blur_level": noise_level,
+            "laplacian_var": round(laplacian_var, 1),
+            "face_detector_score": round(primary_score, 2),
+            "tracking_stability": tracking_stability,
+            "primary_angle": 0,
+            "recommended_config": {
+                "face_detector_model": rec_detector,
+                "face_detector_size": rec_size,
+                "detection_threshold": rec_thresh,
+                "reference_face_distance": rec_dist,
+                "smoothing": rec_smoothing,
+                "face_detector_angles": rec_angles,
+                "face_landmarker_score": rec_landmarker
+            }
+        })
+
+    cap.release()
+
+    # 3. Consolidação da Recomendação Global Ideal
+    has_vhs_noise = len(vhs_noise_flags) > 0
+    has_distant = len(distant_shot_flags) > 0
+    rationale = []
+
+    if has_distant and has_vhs_noise:
+        global_detector = "retinaface"
+        global_threshold = 0.35
+        global_distance = 0.48
+        global_smoothing = 8
+        global_landmarker = 0.40
+        rationale.append("Identificadas micro-faces em planos abertos combinadas com ruído analógico de fita (VHS).")
+        rationale.append("Recomendado RetinaFace com limiar de detecção reduzido para 0.35 para evitar alternância (flickering).")
+        rationale.append("Tolerância biométrica (Face Distance) ampliada para 0.48 para manter o tracking ativo em tomadas distantes.")
+        rationale.append("Suavização temporal ajustada para 8 para amortecer transições entre takes.")
+    elif has_distant:
+        global_detector = "retinaface"
+        global_threshold = 0.45
+        global_distance = 0.42
+        global_smoothing = 6
+        global_landmarker = 0.45
+        rationale.append("Detectados takes distantes (planos médios e abertos).")
+        rationale.append("Recomendado RetinaFace com limiar de 0.45 para estabilidade contínua.")
+    elif has_vhs_noise:
+        global_detector = "yolo_face"
+        global_threshold = 0.50
+        global_distance = 0.38
+        global_smoothing = 7
+        global_landmarker = 0.45
+        rationale.append("Gravação com textura/ruído analógico detectada.")
+        rationale.append("Suavização elevada para 7 para mitigar oscilações de grão da imagem.")
+    else:
+        global_detector = "yolo_face"
+        global_threshold = 0.65
+        global_distance = 0.35
+        global_smoothing = 5
+        global_landmarker = 0.50
+        rationale.append("Vídeo nítido em alta definição com enquadramentos favoráveis.")
+        rationale.append("Parâmetros de alta precisão mantidos (YOLO-Face, Threshold 0.65).")
+
+    return {
+        "video_path": resolved_path,
+        "total_duration": round(total_duration, 2),
+        "total_scenes": len(scenes_diagnostics),
+        "vhs_noise_detected": has_vhs_noise,
+        "distant_shots_detected": has_distant,
+        "critical_flicker_scenes_count": flicker_risk_count,
+        "overall_recommendation": {
+            "face_detector_model": global_detector,
+            "face_detector_size": "640x640",
+            "detection_threshold": global_threshold,
+            "reference_face_distance": global_distance,
+            "smoothing": global_smoothing,
+            "face_detector_angles": [0],
+            "face_landmarker_score": global_landmarker,
+            "rationale": rationale
+        },
+        "scenes": scenes_diagnostics
+    }

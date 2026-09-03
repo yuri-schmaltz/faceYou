@@ -125,3 +125,49 @@ export interface FaceMapping {
   target_face_index: number;
   reference_frame_number: number;
 }
+
+export interface SceneDiagnostic {
+  scene_index: number;
+  start_time: number;
+  end_time: number;
+  duration: number;
+  keyframe_time: number;
+  keyframe_thumb_url?: string;
+  faces_detected_count: number;
+  primary_face_box_size: { width: number; height: number };
+  shot_type: "extreme_close_up" | "close_up" | "medium_shot" | "long_shot" | "no_face";
+  noise_blur_level: "low" | "medium" | "high";
+  laplacian_var: number;
+  face_detector_score: number;
+  tracking_stability: "stable" | "flickering_risk" | "high_risk";
+  primary_angle: number;
+  recommended_config: {
+    face_detector_model: string;
+    face_detector_size: string;
+    detection_threshold: number;
+    reference_face_distance: number;
+    smoothing: number;
+    face_detector_angles: number[];
+    face_landmarker_score: number;
+  };
+}
+
+export interface VideoDiagnosticReport {
+  video_path: string;
+  total_duration: number;
+  total_scenes: number;
+  vhs_noise_detected: boolean;
+  distant_shots_detected: boolean;
+  critical_flicker_scenes_count: number;
+  overall_recommendation: {
+    face_detector_model: string;
+    face_detector_size: string;
+    detection_threshold: number;
+    reference_face_distance: number;
+    smoothing: number;
+    face_detector_angles: number[];
+    face_landmarker_score: number;
+    rationale: string[];
+  };
+  scenes: SceneDiagnostic[];
+}

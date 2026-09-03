@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Sparkles, RefreshCw, AlertCircle, Folder } from "lucide-react";
-import { Toast, SourceItem, DetectedFace, Job, Project } from "../types";
+import { Toast, SourceItem, DetectedFace, Job, Project, VideoDiagnosticReport } from "../types";
 import { resolveApiUrl, formatApiUrl, getInitialApiUrl } from "../utils/api";
 import { useJobs } from "../hooks/useJobs";
 import { useProjects } from "../hooks/useProjects";
@@ -19,6 +19,7 @@ import { ProjectsGallery } from "../components/ProjectsGallery";
 import { JobsList } from "../components/JobsList";
 import { SettingsModal } from "../components/SettingsModal";
 import { NewProjectModal } from "../components/NewProjectModal";
+import { VideoDiagnosticWizard } from "../components/VideoDiagnosticWizard";
 import { StatusBar } from "../components/StatusBar";
 
 export default function Home() {
@@ -229,8 +230,12 @@ export default function Home() {
   const [outputVideoEncoder, setOutputVideoEncoder] = useState<string>("libx264");
   const [outputAudioEncoder, setOutputAudioEncoder] = useState<string>("aac");
   const [outputAudioQuality, setOutputAudioQuality] = useState<number>(80);
-  const [outputAudioVolume, setOutputAudioVolume] = useState<number>(100);
   const [previewOutputUrl, setPreviewOutputUrl] = useState<string | null>(null);
+
+  // Assistente de Pré-Análise & Diagnóstico de Vídeo (Wizard)
+  const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
+  const [isDiagnosing, setIsDiagnosing] = useState<boolean>(false);
+  const [diagnosticReport, setDiagnosticReport] = useState<VideoDiagnosticReport | null>(null);
 
   // Estados de execução
   const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
@@ -451,6 +456,63 @@ export default function Home() {
     } finally {
       setIsAnalyzingTargetFaces(false);
     }
+  };
+
+  // Executar Assistente de Pré-Análise & Diagnóstico de Vídeo
+  const handleRunVideoDiagnosis = async () => {
+    if (!targetMediaFullPath) {
+      showToast("warning", "Mídia de Destino Ausente", "Carregue um vídeo de destino antes de iniciar o assistente.");
+      return;
+    }
+    const isVideoFile = !!targetMediaName.match(/\.(mp4|webm|mkv|avi|mov)$/i);
+    if (!isVideoFile) {
+      showToast("info", "Recurso Exclusivo para Vídeos", "O Assistente de Diagnóstico analisa takes e ruído temporal em vídeos.");
+      return;
+    }
+
+    setIsWizardOpen(true);
+    setIsDiagnosing(true);
+
+    try {
+      const url = formatApiUrl(apiUrl, "/api/video/diagnose");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          video_path: targetMediaFullPath,
+          max_scenes: 15,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Falha ao diagnosticar vídeo.");
+      const data: VideoDiagnosticReport = await res.json();
+      setDiagnosticReport(data);
+      showToast("success", "Diagnóstico Concluído", `${data.total_scenes} takes mapeados com recomendações personalizadas.`);
+    } catch (err: any) {
+      showToast("error", "Erro no Diagnóstico", err.message || "Não foi possível analisar o vídeo.");
+    } finally {
+      setIsDiagnosing(false);
+    }
+  };
+
+  // Aplicar Recomendações do Assistente
+  const handleApplyDiagnosticRecommendation = (rec: {
+    face_detector_model: string;
+    face_detector_size: string;
+    detection_threshold: number;
+    reference_face_distance: number;
+    smoothing: number;
+    face_detector_angles: number[];
+    face_landmarker_score: number;
+  }) => {
+    setFaceDetectorModel(rec.face_detector_model);
+    setFaceDetectorSize(rec.face_detector_size);
+    setDetectionThreshold(rec.detection_threshold);
+    setSmoothing(rec.smoothing);
+    setFaceDetectorAngles(rec.face_detector_angles || [0]);
+    setFaceLandmarkerScore(rec.face_landmarker_score || 0.5);
+
+    showToast("success", "Parâmetros Calibrados", `Detector ajustado para ${rec.face_detector_model} com limiar ${rec.detection_threshold} e smoothing ${rec.smoothing}.`);
   };
 
   // Gerar Preview
@@ -853,6 +915,8 @@ export default function Home() {
                       getScaledBox={getScaledBox}
                       targetContainerRef={targetContainerRef}
                       setTargetDimensions={setTargetDimensions}
+                      onOpenWizard={handleRunVideoDiagnosis}
+                      isDiagnosing={isDiagnosing}
                     />
                   </div>
                 </div>
@@ -1101,6 +1165,19 @@ export default function Home() {
         onClose={() => setIsNewProjectModalOpen(false)}
         onCreateProject={handleCreateNewProject}
         availableProcessors={availableProcessors}
+      />
+
+      {/* Assistente de Pré-Análise & Diagnóstico de Vídeo */}
+      <VideoDiagnosticWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        report={diagnosticReport}
+        isLoading={isDiagnosing}
+        onApplyRecommendation={handleApplyDiagnosticRecommendation}
+        onJumpToSceneTimestamp={(sec) => {
+          setTargetVideoTime(sec);
+          showToast("info", "Navegação por Take", `Posicionado em ${sec.toFixed(1)}s`);
+        }}
       />
 
       {/* Bottom Status Bar */}

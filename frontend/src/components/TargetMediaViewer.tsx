@@ -23,6 +23,8 @@ interface TargetMediaViewerProps {
   getScaledBox: (box: number[]) => { left: number; top: number; width: number; height: number } | null;
   targetContainerRef: React.RefObject<HTMLDivElement | null>;
   setTargetDimensions: (dim: { width: number; height: number }) => void;
+  onOpenWizard?: () => void;
+  isDiagnosing?: boolean;
 }
 
 export const TargetMediaViewer: React.FC<TargetMediaViewerProps> = ({
@@ -45,7 +47,9 @@ export const TargetMediaViewer: React.FC<TargetMediaViewerProps> = ({
   onDrop,
   getScaledBox,
   targetContainerRef,
-  setTargetDimensions
+  setTargetDimensions,
+  onOpenWizard,
+  isDiagnosing,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,15 +67,28 @@ export const TargetMediaViewer: React.FC<TargetMediaViewerProps> = ({
       <div className="flex justify-between items-center mb-1">
         <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Mídia de Destino (Target)</span>
         {targetMedia && (
-          <button
-            onClick={onAnalyzeFaces}
-            disabled={isAnalyzing}
-            className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 px-2 py-0.5 rounded font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-            title="Escanear rostos no frame atual"
-          >
-            {isAnalyzing ? <RefreshCw size={10} className="animate-spin text-red-500" /> : <ScanFace size={10} className="text-red-400" />}
-            {isAnalyzing ? "Analisando..." : "Escanear Rostos"}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {isVideo && onOpenWizard && (
+              <button
+                onClick={onOpenWizard}
+                disabled={isDiagnosing}
+                className="text-[10px] bg-gradient-to-r from-purple-900/60 to-indigo-900/60 hover:from-purple-800 hover:to-indigo-800 text-purple-200 border border-purple-500/40 px-2 py-0.5 rounded font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 shadow-sm"
+                title="Pré-analisar vídeo completo, ruído e takes"
+              >
+                {isDiagnosing ? <RefreshCw size={10} className="animate-spin text-purple-400" /> : <Sparkles size={10} className="text-purple-400" />}
+                {isDiagnosing ? "Analisando..." : "Assistente IA"}
+              </button>
+            )}
+            <button
+              onClick={onAnalyzeFaces}
+              disabled={isAnalyzing}
+              className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 px-2 py-0.5 rounded font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              title="Escanear rostos no frame atual"
+            >
+              {isAnalyzing ? <RefreshCw size={10} className="animate-spin text-red-500" /> : <ScanFace size={10} className="text-red-400" />}
+              {isAnalyzing ? "Analisando..." : "Escanear Rostos"}
+            </button>
+          </div>
         )}
       </div>
 
