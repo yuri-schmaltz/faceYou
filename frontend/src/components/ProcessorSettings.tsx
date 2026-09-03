@@ -223,12 +223,29 @@ export const ProcessorSettings: React.FC<ProcessorSettingsProps> = ({
       {/* 1. Header do Inspetor: Chips de Processadores Ativos (Todos os 11) */}
       <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-3 flex flex-col gap-2 flex-shrink-0 shadow-inner">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white font-extrabold text-xs tracking-wide">
-            <Cpu size={14} className="text-red-500" />
-            <span>Processadores</span>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-              {selectedProcessors.length} {selectedProcessors.length === 1 ? "ativo" : "ativos"}
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-white font-extrabold text-xs tracking-wide">
+              <Cpu size={14} className="text-red-500" />
+              <span>Processadores</span>
+            </div>
+
+            {/* Combobox de Presets ao lado do título */}
+            <div className="relative">
+              <select
+                value={selectedPresetName}
+                onChange={(e) => onApplyPreset(e.target.value)}
+                className="bg-zinc-950/80 border border-zinc-750 hover:border-red-500/50 text-zinc-200 text-[10px] font-bold pl-6 pr-6 py-1 rounded-md appearance-none outline-none cursor-pointer transition-colors shadow-sm"
+                title="Carregar predefinição de processadores e ajustes"
+              >
+                {presets.map((preset) => (
+                  <option key={preset.name} value={preset.name} className="bg-zinc-900 text-zinc-200 py-1">
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <Wand2 size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none" />
+              <ChevronDown size={11} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+            </div>
           </div>
 
           <label className="flex items-center gap-1.5 cursor-pointer select-none" title="Atualiza o preview automaticamente ao alterar qualquer controle">
@@ -268,27 +285,6 @@ export const ProcessorSettings: React.FC<ProcessorSettingsProps> = ({
               </button>
             );
           })}
-        </div>
-
-        {/* Barra de Presets Rápidos */}
-        <div className="flex items-center gap-1.5 pt-1.5 border-t border-zinc-800/60 overflow-x-auto text-[10px]">
-          <span className="text-zinc-500 font-bold uppercase tracking-wider text-[9px] flex items-center gap-1">
-            <Wand2 size={10} className="text-amber-400" /> Presets:
-          </span>
-          {presets.map((preset) => (
-            <button
-              key={preset.name}
-              type="button"
-              onClick={() => onApplyPreset(preset.name)}
-              className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer whitespace-nowrap ${
-                selectedPresetName === preset.name
-                  ? "bg-red-600 text-white shadow-sm"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-750 hover:text-zinc-200"
-              }`}
-            >
-              {preset.name}
-            </button>
-          ))}
         </div>
       </div>
 
