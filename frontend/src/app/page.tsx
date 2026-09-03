@@ -15,6 +15,8 @@ import { TargetMediaViewer } from "../components/TargetMediaViewer";
 import { FaceMappingModal } from "../components/FaceMappingModal";
 import { ProcessorSettings } from "../components/ProcessorSettings";
 import { VideoComparator } from "../components/VideoComparator";
+import { ExportSettings } from "../components/ExportSettings";
+import { FaceMaskSettings } from "../components/FaceMaskSettings";
 import { ProjectsGallery } from "../components/ProjectsGallery";
 import { JobsList } from "../components/JobsList";
 import { SettingsModal } from "../components/SettingsModal";
@@ -946,24 +948,52 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* COLUNA 2: MONITOR CENTRAL DE VISUALIZAÇÃO (Ajustado para balancear as laterais) */}
-                <div className="lg:col-span-6 xl:col-span-6 flex flex-col overflow-hidden h-full">
-                  <VideoComparator
-                    previewOutputUrl={previewOutputUrl}
-                    onDownloadOutput={handleDownloadOutput}
-                    outputFormat={outputFormat}
-                    setOutputFormat={setOutputFormat}
-                    outputQuality={outputQuality}
-                    setOutputQuality={setOutputQuality}
-                    outputVideoEncoder={outputVideoEncoder}
-                    setOutputVideoEncoder={setOutputVideoEncoder}
-                    outputAudioEncoder={outputAudioEncoder}
-                    setOutputAudioEncoder={setOutputAudioEncoder}
-                    outputAudioQuality={outputAudioQuality}
-                    setOutputAudioQuality={setOutputAudioQuality}
-                    outputAudioVolume={outputAudioVolume}
-                    setOutputAudioVolume={setOutputAudioVolume}
-                  />
+                {/* COLUNA 2: MONITOR CENTRAL DE VISUALIZAÇÃO + (OPÇÕES DE EXPORTAÇÃO | DETECÇÃO & MÁSCARAS) */}
+                <div className="lg:col-span-6 xl:col-span-6 flex flex-col gap-3.5 overflow-hidden h-full">
+                  {/* Visualização de Resultado (Topo) */}
+                  <div className="flex-1 min-h-[220px] overflow-hidden">
+                    <VideoComparator
+                      previewOutputUrl={previewOutputUrl}
+                      onDownloadOutput={handleDownloadOutput}
+                    />
+                  </div>
+
+                  {/* Espaço Inferior dividido em 2 Colunas: Esquerda (Exportação) | Direita (Detecção Facial & Máscaras) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 flex-shrink-0 min-h-[175px]">
+                    {/* Sub-coluna Esquerda: Opções de Exportação */}
+                    <ExportSettings
+                      outputFormat={outputFormat}
+                      setOutputFormat={setOutputFormat}
+                      outputQuality={outputQuality}
+                      setOutputQuality={setOutputQuality}
+                      outputVideoEncoder={outputVideoEncoder}
+                      setOutputVideoEncoder={setOutputVideoEncoder}
+                      outputAudioEncoder={outputAudioEncoder}
+                      setOutputAudioEncoder={setOutputAudioEncoder}
+                      outputAudioQuality={outputAudioQuality}
+                      setOutputAudioQuality={setOutputAudioQuality}
+                      outputAudioVolume={outputAudioVolume}
+                      setOutputAudioVolume={setOutputAudioVolume}
+                    />
+
+                    {/* Sub-coluna Direita: Detecção Facial & Máscaras */}
+                    <FaceMaskSettings
+                      faceMaskTypes={faceMaskTypes}
+                      setFaceMaskTypes={setFaceMaskTypes}
+                      faceMaskPadding={faceMaskPadding}
+                      setFaceMaskPadding={setFaceMaskPadding}
+                      faceDetectorModel={faceDetectorModel}
+                      setFaceDetectorModel={setFaceDetectorModel}
+                      faceDetectorSize={faceDetectorSize}
+                      setFaceDetectorSize={setFaceDetectorSize}
+                      faceDetectorAngles={faceDetectorAngles}
+                      setFaceDetectorAngles={setFaceDetectorAngles}
+                      faceLandmarkerModel={faceLandmarkerModel}
+                      setFaceLandmarkerModel={setFaceLandmarkerModel}
+                      faceLandmarkerScore={faceLandmarkerScore}
+                      setFaceLandmarkerScore={setFaceLandmarkerScore}
+                    />
+                  </div>
                 </div>
 
                 {/* COLUNA 3: INSPETOR DE PROCESSADORES & RENDERING (Simétrica com Coluna 1) */}
@@ -1033,20 +1063,6 @@ export default function Home() {
                       setBackgroundRemoverModel={setBackgroundRemoverModel}
                       backgroundRemoverColor={backgroundRemoverColor}
                       setBackgroundRemoverColor={setBackgroundRemoverColor}
-                      faceMaskTypes={faceMaskTypes}
-                      setFaceMaskTypes={setFaceMaskTypes}
-                      faceMaskPadding={faceMaskPadding}
-                      setFaceMaskPadding={setFaceMaskPadding}
-                      faceDetectorModel={faceDetectorModel}
-                      setFaceDetectorModel={setFaceDetectorModel}
-                      faceDetectorSize={faceDetectorSize}
-                      setFaceDetectorSize={setFaceDetectorSize}
-                      faceDetectorAngles={faceDetectorAngles}
-                      setFaceDetectorAngles={setFaceDetectorAngles}
-                      faceLandmarkerModel={faceLandmarkerModel}
-                      setFaceLandmarkerModel={setFaceLandmarkerModel}
-                      faceLandmarkerScore={faceLandmarkerScore}
-                      setFaceLandmarkerScore={setFaceLandmarkerScore}
                     />
                   </div>
 

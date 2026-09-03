@@ -73,21 +73,6 @@ interface ProcessorSettingsProps {
   setBackgroundRemoverModel?: (val: string) => void;
   backgroundRemoverColor?: string;
   setBackgroundRemoverColor?: (val: string) => void;
-  // Configurações Avançadas de Detecção e Máscara
-  faceMaskTypes?: string[];
-  setFaceMaskTypes?: (val: string[]) => void;
-  faceMaskPadding?: number[];
-  setFaceMaskPadding?: (val: number[]) => void;
-  faceDetectorModel?: string;
-  setFaceDetectorModel?: (val: string) => void;
-  faceDetectorSize?: string;
-  setFaceDetectorSize?: (val: string) => void;
-  faceDetectorAngles?: number[];
-  setFaceDetectorAngles?: (val: number[]) => void;
-  faceLandmarkerModel?: string;
-  setFaceLandmarkerModel?: (val: string) => void;
-  faceLandmarkerScore?: number;
-  setFaceLandmarkerScore?: (val: number) => void;
 }
 
 export const ProcessorSettings: React.FC<ProcessorSettingsProps> = ({
@@ -134,19 +119,19 @@ export const ProcessorSettings: React.FC<ProcessorSettingsProps> = ({
   setAgeModifierDirection,
   expressionRestorerFactor,
   setExpressionRestorerFactor,
-  deepSwapperModel = "iperov/elon_musk_224",
+  deepSwapperModel = "inswapper_128",
   setDeepSwapperModel,
-  deepSwapperMorph = 100,
+  deepSwapperMorph = 0.5,
   setDeepSwapperMorph,
-  lipSyncerModel = "wav2lip_gan_96",
+  lipSyncerModel = "wav2lip",
   setLipSyncerModel,
   lipSyncerWeight = 0.8,
   setLipSyncerWeight,
-  faceDebuggerItems = ["bounding-box", "face-landmark-5", "face-mask"],
+  faceDebuggerItems = ["kps", "face-mask"],
   setFaceDebuggerItems,
-  frameColorizerModel = "ddcolor",
+  frameColorizerModel = "deoldify",
   setFrameColorizerModel,
-  frameColorizerBlend = 100,
+  frameColorizerBlend = 0.8,
   setFrameColorizerBlend,
   frameColorizerSize = "512x512",
   setFrameColorizerSize,
@@ -154,20 +139,6 @@ export const ProcessorSettings: React.FC<ProcessorSettingsProps> = ({
   setBackgroundRemoverModel,
   backgroundRemoverColor = "transparent",
   setBackgroundRemoverColor,
-  faceMaskTypes = ["box", "occlusion"],
-  setFaceMaskTypes,
-  faceMaskPadding = [0, 0, 0, 0],
-  setFaceMaskPadding,
-  faceDetectorModel = "yolo_face",
-  setFaceDetectorModel,
-  faceDetectorSize = "640x640",
-  setFaceDetectorSize,
-  faceDetectorAngles = [0],
-  setFaceDetectorAngles,
-  faceLandmarkerModel = "2dfan4",
-  setFaceLandmarkerModel,
-  faceLandmarkerScore = 0.5,
-  setFaceLandmarkerScore,
 }) => {
   const [isAdvancedDetectionExpanded, setIsAdvancedDetectionExpanded] = useState<boolean>(false);
   // Controle de sanfona (accordion) individual para cada um dos 11 processadores
@@ -942,269 +913,6 @@ export const ProcessorSettings: React.FC<ProcessorSettingsProps> = ({
             )}
           </div>
         )}
-
-        {/* CARD AVANÇADO: DETECÇÃO FACIAL & MÁSCARAS */}
-        <div className="bg-zinc-950/60 border border-cyan-500/30 rounded-xl overflow-hidden shadow-lg shadow-cyan-950/10 transition-all mt-2">
-          <div
-            onClick={() => setIsAdvancedDetectionExpanded(!isAdvancedDetectionExpanded)}
-            className="px-3.5 py-2.5 bg-zinc-900/70 hover:bg-zinc-900 cursor-pointer flex items-center justify-between border-b border-zinc-800"
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 animate-pulse" />
-              <span className="text-xs font-black text-white tracking-wider">
-                Detecção Facial & Máscaras
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-zinc-400">
-              <span className="text-[10px] font-mono text-cyan-400 font-bold">
-                {faceDetectorModel} ({faceDetectorSize})
-              </span>
-              {isAdvancedDetectionExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </div>
-          </div>
-
-          {isAdvancedDetectionExpanded && (
-            <div className="p-3.5 space-y-4 animate-fade-in text-xs">
-              {/* 1. Tipos de Máscara (Face Mask Types) */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 block uppercase tracking-wider">
-                  Tipos de Máscara (Face Mask Types)
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                  {[
-                    { id: "box", label: "Box (Caixa)" },
-                    { id: "occlusion", label: "Oclusão (XSeg)" },
-                    { id: "area", label: "Área" },
-                    { id: "region", label: "Região" },
-                  ].map((item) => {
-                    const isChecked = faceMaskTypes?.includes(item.id);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          if (!setFaceMaskTypes || !faceMaskTypes) return;
-                          if (isChecked) {
-                            if (faceMaskTypes.length > 1) {
-                              setFaceMaskTypes(faceMaskTypes.filter((t) => t !== item.id));
-                            }
-                          } else {
-                            setFaceMaskTypes([...faceMaskTypes, item.id]);
-                          }
-                        }}
-                        className={`px-2 py-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer text-center ${
-                          isChecked
-                            ? "bg-cyan-500/20 border-cyan-400/60 text-cyan-300 shadow-sm"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 2. Padding da Máscara (Bordas) */}
-              <div className="space-y-1.5 pt-1 border-t border-zinc-900">
-                <label className="text-[10px] font-bold text-zinc-400 block uppercase tracking-wider">
-                  Padding da Máscara (Margens em Pixels)
-                </label>
-                <div className="grid grid-cols-2 gap-2.5 bg-zinc-900/40 p-2.5 rounded-xl border border-zinc-800/80">
-                  {/* Top */}
-                  <div>
-                    <div className="flex justify-between text-[10px] font-bold text-zinc-400 mb-1">
-                      <span>Topo (Top)</span>
-                      <span className="font-mono text-cyan-400">{faceMaskPadding?.[0] ?? 0}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={faceMaskPadding?.[0] ?? 0}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setFaceMaskPadding?.([val, faceMaskPadding?.[1] ?? 0, faceMaskPadding?.[2] ?? 0, faceMaskPadding?.[3] ?? 0]);
-                      }}
-                      className="w-full accent-cyan-400 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  {/* Right */}
-                  <div>
-                    <div className="flex justify-between text-[10px] font-bold text-zinc-400 mb-1">
-                      <span>Direita (Right)</span>
-                      <span className="font-mono text-cyan-400">{faceMaskPadding?.[1] ?? 0}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={faceMaskPadding?.[1] ?? 0}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setFaceMaskPadding?.([faceMaskPadding?.[0] ?? 0, val, faceMaskPadding?.[2] ?? 0, faceMaskPadding?.[3] ?? 0]);
-                      }}
-                      className="w-full accent-cyan-400 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  {/* Bottom */}
-                  <div>
-                    <div className="flex justify-between text-[10px] font-bold text-zinc-400 mb-1">
-                      <span>Base (Bottom)</span>
-                      <span className="font-mono text-cyan-400">{faceMaskPadding?.[2] ?? 0}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={faceMaskPadding?.[2] ?? 0}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setFaceMaskPadding?.([faceMaskPadding?.[0] ?? 0, faceMaskPadding?.[1] ?? 0, val, faceMaskPadding?.[3] ?? 0]);
-                      }}
-                      className="w-full accent-cyan-400 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  {/* Left */}
-                  <div>
-                    <div className="flex justify-between text-[10px] font-bold text-zinc-400 mb-1">
-                      <span>Esquerda (Left)</span>
-                      <span className="font-mono text-cyan-400">{faceMaskPadding?.[3] ?? 0}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={faceMaskPadding?.[3] ?? 0}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setFaceMaskPadding?.([faceMaskPadding?.[0] ?? 0, faceMaskPadding?.[1] ?? 0, faceMaskPadding?.[2] ?? 0, val]);
-                      }}
-                      className="w-full accent-cyan-400 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Detector Facial (Model & Resolution) */}
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-zinc-900">
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">
-                    Detector Facial (Face Detector)
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={faceDetectorModel}
-                      onChange={(e) => setFaceDetectorModel?.(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded-lg appearance-none font-bold text-zinc-200 outline-none cursor-pointer focus:border-cyan-400"
-                    >
-                      <option value="yolo_face">YOLO-Face (Padrão / Rápido)</option>
-                      <option value="retinaface">RetinaFace (Alta Precisão)</option>
-                      <option value="scrfd">SCRFD (Eficiente)</option>
-                      <option value="yunet">YuNet (Leve)</option>
-                    </select>
-                    <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-zinc-500 pointer-events-none" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">
-                    Tamanho do Detector (Size)
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={faceDetectorSize}
-                      onChange={(e) => setFaceDetectorSize?.(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded-lg appearance-none font-bold text-zinc-200 outline-none cursor-pointer focus:border-cyan-400"
-                    >
-                      <option value="640x640">640x640 (Padrão)</option>
-                      <option value="512x512">512x512</option>
-                      <option value="480x480">480x480</option>
-                      <option value="320x320">320x320</option>
-                      <option value="160x160">160x160</option>
-                    </select>
-                    <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-zinc-500 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. Ângulos do Detector & Landmarker */}
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-zinc-900">
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">
-                    Ângulos de Busca (Detector Angles)
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    {[0, 90, 180, 270].map((angle) => {
-                      const isChecked = faceDetectorAngles?.includes(angle);
-                      return (
-                        <button
-                          key={angle}
-                          type="button"
-                          onClick={() => {
-                            if (!setFaceDetectorAngles || !faceDetectorAngles) return;
-                            if (isChecked) {
-                              if (faceDetectorAngles.length > 1) {
-                                setFaceDetectorAngles(faceDetectorAngles.filter((a) => a !== angle));
-                              }
-                            } else {
-                              setFaceDetectorAngles([...faceDetectorAngles, angle]);
-                            }
-                          }}
-                          className={`flex-1 py-1 rounded border text-[10px] font-bold transition-all cursor-pointer ${
-                            isChecked
-                              ? "bg-cyan-500/20 border-cyan-400/60 text-cyan-300"
-                              : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          {angle}°
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">
-                    Landmarker Facial (68 Pontos)
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={faceLandmarkerModel}
-                      onChange={(e) => setFaceLandmarkerModel?.(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 text-xs px-2.5 py-1.5 rounded-lg appearance-none font-bold text-zinc-200 outline-none cursor-pointer focus:border-cyan-400"
-                    >
-                      <option value="2dfan4">2DFAN4 (Padrão Oficial)</option>
-                      <option value="peppa_wutz">Peppa Wutz</option>
-                    </select>
-                    <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-zinc-500 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* 5. Confiança do Landmarker */}
-              <div className="pt-1 border-t border-zinc-900">
-                <div className="flex justify-between text-[10px] font-bold text-zinc-400 mb-1">
-                  <span>Limiar de Confiança do Landmarker (Score)</span>
-                  <span className="font-mono text-cyan-400">{faceLandmarkerScore ?? 0.5}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="0.9"
-                  step="0.05"
-                  value={faceLandmarkerScore ?? 0.5}
-                  onChange={(e) => setFaceLandmarkerScore?.(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-400 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
