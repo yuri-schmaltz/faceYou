@@ -1417,6 +1417,7 @@ def generate_preview(request: PreviewRequest):
             'source_paths': resolved_source_paths,
             'target_path': resolved_target_path,
             'processors': request.processors or ["face_swapper"],
+            'face_selector_mode': 'many',
         }
         if request.face_swapper_model is not None:
             overrides['face_swapper_model'] = request.face_swapper_model
@@ -1544,33 +1545,37 @@ def generate_preview(request: PreviewRequest):
 
             # Redimensionar temporariamente para otimizar velocidade de preview
             preview_resolution = '1024x1024'
-            temp_vision_frame = restrict_frame(target_vision_frame, unpack_resolution(preview_resolution))
-            temp_vision_frame_copy = temp_vision_frame.copy()
-            temp_vision_mask = extract_vision_mask(temp_vision_frame_copy)
+            target_vision_frame = restrict_frame(target_vision_frame, unpack_resolution(preview_resolution))
+            temp_vision_mask = extract_vision_mask(target_vision_frame)
+            target_vision_frame = merge_vision_mask(target_vision_frame, temp_vision_mask)
+            restricted_target_vision_frames = [ target_vision_frame[:, :, :3] ]
+            temp_vision_frame = target_vision_frame.copy()
 
             for processor_module in get_processors_modules(processors):
                 ff_logger.disable()
                 if processor_module.pre_process('preview'):
                     ff_logger.enable()
-                    temp_vision_frame_copy, temp_vision_mask = processor_module.process_frame(
+                    temp_vision_frame, temp_vision_mask = processor_module.process_frame(
                     {
                         'reference_vision_frame': reference_vision_frame,
                         'source_audio_frame': source_audio_frame,
                         'source_voice_frame': source_voice_frame,
                         'source_vision_frames': source_vision_frames,
-                        'target_vision_frame': temp_vision_frame[:, :, :3],
-                        'temp_vision_frame': temp_vision_frame_copy[:, :, :3],
+                        'target_vision_frames': restricted_target_vision_frames,
+                        'temp_vision_frame': temp_vision_frame[:, :, :3],
                         'temp_vision_mask': temp_vision_mask
                     })
                 ff_logger.enable()
 
-            # Converter para imagem JPEG para retorno
-            if len(temp_vision_frame_copy.shape) == 3 and temp_vision_frame_copy.shape[2] == 4:
-                output_frame = cv2.cvtColor(temp_vision_frame_copy, cv2.COLOR_BGRA2BGR)
-            elif len(temp_vision_frame_copy.shape) == 3 and temp_vision_frame_copy.shape[2] == 3:
-                output_frame = temp_vision_frame_copy
-            else:
-                output_frame = temp_vision_frame_copy
+            fill_color = sm.get_item('background_remover_fill_color')
+            alpha = fill_color[-1] if fill_color else 0
+            temp_vision_mask = temp_vision_mask.clip(alpha, 255)
+            output_frame = merge_vision_mask(temp_vision_frame, temp_vision_mask)
+            output_frame = cv2.resize(output_frame, target_vision_frame.shape[1::-1])
+
+            # Converter para imagem JPEG BGR se necessário
+            if len(output_frame.shape) == 3 and output_frame.shape[2] == 4:
+                output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
 
             # Salvar como JPEG temporário
             outputs_dir = os.path.join(jobs_path, "outputs")
