@@ -153,7 +153,6 @@ export default function Home() {
   const [targetMediaFullPath, setTargetMediaFullPath] = useState<string | null>(null);
   const [targetMediaName, setTargetMediaName] = useState<string>("");
   const [targetVideoTime, setTargetVideoTime] = useState<number>(0);
-  const [processFromCurrentPoint, setProcessFromCurrentPoint] = useState<boolean>(false);
 
   const [targetDimensions, setTargetDimensions] = useState<{ width: number; height: number } | null>(null);
   const [containerDimensions, setContainerDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -623,8 +622,7 @@ export default function Home() {
       return;
     }
     setIsGenerating(true);
-
-    const trimFrameStart = processFromCurrentPoint ? Math.round(targetVideoTime * 30) : null;
+    const trimFrameStart = null;
     const mappings = Object.entries(faceMappings).map(([targetIdx, srcPath]) => ({
       source_path: srcPath,
       target_face_index: parseInt(targetIdx, 10),
@@ -931,8 +929,6 @@ export default function Home() {
                       onSelectFace={(face) => setSelectedFaceForModal(face)}
                       isAnalyzing={isAnalyzingTargetFaces}
                       onAnalyzeFaces={handleAnalyzeFaces}
-                      processFromCurrentPoint={processFromCurrentPoint}
-                      setProcessFromCurrentPoint={setProcessFromCurrentPoint}
                       targetVideoTime={targetVideoTime}
                       setTargetVideoTime={setTargetVideoTime}
                       isDragging={isDraggingTarget}

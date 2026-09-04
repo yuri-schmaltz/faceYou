@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { Upload, X, ScanFace, RefreshCw, Sparkles } from "lucide-react";
 import { DetectedFace } from "../types";
 
@@ -12,8 +12,6 @@ interface TargetMediaViewerProps {
   onSelectFace: (face: DetectedFace) => void;
   isAnalyzing: boolean;
   onAnalyzeFaces: () => void;
-  processFromCurrentPoint: boolean;
-  setProcessFromCurrentPoint: (val: boolean) => void;
   targetVideoTime: number;
   setTargetVideoTime: (time: number) => void;
   isDragging: boolean;
@@ -37,8 +35,6 @@ export const TargetMediaViewer: React.FC<TargetMediaViewerProps> = ({
   onSelectFace,
   isAnalyzing,
   onAnalyzeFaces,
-  processFromCurrentPoint,
-  setProcessFromCurrentPoint,
   targetVideoTime,
   setTargetVideoTime,
   isDragging,
@@ -52,6 +48,15 @@ export const TargetMediaViewer: React.FC<TargetMediaViewerProps> = ({
   isDiagnosing,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current && typeof targetVideoTime === "number" && !isNaN(targetVideoTime)) {
+      if (Math.abs(videoRef.current.currentTime - targetVideoTime) > 0.25) {
+        videoRef.current.currentTime = targetVideoTime;
+      }
+    }
+  }, [targetVideoTime]);
 
   const isVideo = targetMedia && targetMedia.match(/\.(mp4|webm|mkv|avi|mov)$/i);
 
@@ -103,18 +108,24 @@ export const TargetMediaViewer: React.FC<TargetMediaViewerProps> = ({
       {targetMedia ? (
         <div className="relative flex-1 w-full bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden group min-h-0">
           {isVideo ? (
-            <div className="absolute inset-0 w-full h-full flex flex-col justify-between min-h-0">
-              <div ref={targetContainerRef} className="relative w-full h-[75%] bg-black flex items-center justify-center min-h-0 overflow-hidden">
+            <div className="absolute inset-0 w-full h-full flex flex-col min-h-0">
+              <div ref={targetContainerRef} className="relative w-full h-full bg-black flex items-center justify-center min-h-0 overflow-hidden">
                 <video
+                  ref={videoRef}
                   src={targetMedia}
                   className="object-contain w-full h-full min-h-0"
                   controls
                   onTimeUpdate={(e) => setTargetVideoTime(e.currentTarget.currentTime)}
+                  onSeeked={(e) => setTargetVideoTime(e.currentTarget.currentTime)}
+                  onSeeking={(e) => setTargetVideoTime(e.currentTarget.currentTime)}
                   onLoadedMetadata={(e) => {
                     setTargetDimensions({
                       width: e.currentTarget.videoWidth,
                       height: e.currentTarget.videoHeight
                     });
+                    if (targetVideoTime > 0 && e.currentTarget) {
+                      e.currentTarget.currentTime = targetVideoTime;
+                    }
                   }}
                 />
                 {/* Overlays interativas no Player de Vídeo */}
@@ -145,18 +156,6 @@ export const TargetMediaViewer: React.FC<TargetMediaViewerProps> = ({
                     </div>
                   );
                 })}
-              </div>
-              <div className="p-2 bg-zinc-950/80 flex items-center gap-2 border-t border-zinc-850 h-[25%] flex-shrink-0">
-                <input
-                  type="checkbox"
-                  id="trim-start-check-dash"
-                  checked={processFromCurrentPoint}
-                  onChange={(e) => setProcessFromCurrentPoint(e.target.checked)}
-                  className="w-3.5 h-3.5 accent-red-600 rounded cursor-pointer"
-                />
-                <label htmlFor="trim-start-check-dash" className="text-[9px] text-zinc-300 select-none cursor-pointer truncate">
-                  Processar a partir deste ponto ({targetVideoTime.toFixed(1)}s)
-                </label>
               </div>
             </div>
           ) : (
