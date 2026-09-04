@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Settings, Cpu, Terminal, Download, RefreshCw, CheckCircle, Trash2, Layers, AlertCircle, XCircle } from "lucide-react";
+import { Cpu, Terminal, Download, RefreshCw, CheckCircle, Trash2, Layers, AlertCircle, XCircle } from "lucide-react";
 import { formatApiUrl } from "../utils/api";
 
 interface SettingsModalProps {
@@ -148,17 +148,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="w-full space-y-4 animate-fade-in flex-1 overflow-y-auto lg:overflow-hidden flex flex-col p-4 md:p-6 select-none custom-scrollbar">
-      {/* Header Superior Compacto */}
-      <div className="flex items-center justify-between border-b border-zinc-900 pb-3 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-inner">
-            <Settings size={18} />
-          </div>
-          <h2 className="text-lg font-black text-white tracking-tight">Configurações do Sistema</h2>
-        </div>
-
-      </div>
-
       {/* Grid Principal de 2 Colunas Otimizado Horizontalmente */}
       <form onSubmit={onSaveConfig} className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
         {/* COLUNA ESQUERDA (5 Colunas): Model Manager & Logs */}

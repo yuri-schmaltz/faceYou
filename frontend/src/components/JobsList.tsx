@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle, Layers, Clock, CheckCircle2 } from "lucide-react";
+import { AlertCircle, RefreshCw, ExternalLink, Download, Trash2, XCircle, Clock, CheckCircle2 } from "lucide-react";
 import { Job } from "../types";
 
 interface JobsListProps {
@@ -75,14 +75,8 @@ export const JobsList: React.FC<JobsListProps> = ({
 
   return (
     <div className="space-y-5 animate-fade-in flex-1 overflow-hidden flex flex-col w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
-            <Layers size={18} />
-          </div>
-          <h2 className="text-lg font-black text-white tracking-tight">Fila de Renderização (Jobs)</h2>
-        </div>
-
+      {/* Barra de Filtros de Tarefas */}
+      <div className="flex items-center justify-end border-b border-zinc-900 pb-3 flex-shrink-0">
         {/* Filtros */}
         <div className="flex items-center gap-1.5 bg-zinc-900/50 p-1 border border-zinc-800 rounded-lg">
           <button

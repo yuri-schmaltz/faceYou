@@ -72,17 +72,10 @@ export const ProjectsGallery: React.FC<ProjectsGalleryProps> = ({
 
   return (
     <div className="space-y-5 animate-fade-in flex-1 overflow-hidden flex flex-col w-full">
-      {/* Cabeçalho da Galeria */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
-            <Folder size={18} />
-          </div>
-          <h2 className="text-lg font-black text-white tracking-tight">Galeria de Projetos</h2>
-        </div>
-
+      {/* Barra de Filtros e Ações da Galeria */}
+      <div className="flex items-center justify-end gap-4 border-b border-zinc-900 pb-3 flex-shrink-0">
         {/* Filtros e Ações Rápidas */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <div className="flex items-center gap-1.5 bg-zinc-900/60 p-1 border border-zinc-800 rounded-xl">
             <button
               onClick={() => setFilter("all")}
